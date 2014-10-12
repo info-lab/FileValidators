@@ -1,3 +1,15 @@
+Version 0.5.2:
+--------------
+* Finished cleanup on MSOLEValidator and SQLiteValidator. Please bear in mind, however, that the 
+SQLite Validator is still a work in progress and needs more polishing.
+* MSOLEValidator.GetDetails() method improved.
+* SQLiteValidator.GetDetails() method implemented. 
+* Added Validator.end attribute, that means that:
+    * Validator.eof answers "has the validator reached EOF?", or more precisely, "has the validator
+    tried to read bytes unsuccessfully?". This is tracked directly from Validator._Read().
+    * Validator.end answers "has the end of file structure been reached?"
+* Validator.GetStatus() now also returns Validator.end as part of the tuple.
+
 Version 0.5.1:
 --------------
 * Validator._Read() method handles reading and length-checking. All that bureaucracy is taken from 

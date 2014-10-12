@@ -87,6 +87,7 @@ class JPGValidator(Validator):
         valid_restart_markers = self.restart_markers
         self.fd = fd
         self.eof = False
+        self.end = False
         self._SetValidBytes(0)
         self.markers_found = []
         current_marker = self._Read(2)
@@ -168,6 +169,7 @@ class JPGValidator(Validator):
             is_eoi_marker = current_marker == '\xff\xd9'
             if is_eoi_marker:
                 self._SetValidBytes(self.bytes_last_valid - 2)  # small fix to valid bytes length
+                self.end = True
         # The last marker should always be EOI/FFD9 and has a fixed length of 0
         self.eoi_marker = is_eoi_marker
         return self.is_valid #  and not(self.eof)  # commented out to change behaviour

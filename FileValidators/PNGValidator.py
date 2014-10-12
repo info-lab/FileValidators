@@ -137,8 +137,7 @@ class PNGValidator(Validator):
                 elif chunk_name == "IEND":
                     valid_chunks = valid_chunks_list[2]
                     self._CountValidBytes(1)  # small fix
-                    self.eof = True
-                    #end = True
+                    self.end = True
             else:
                 is_valid = chunk_name == ""  # benefit of doubt for an incomplete file
                 # should add some logic to interpret non-standard chunks

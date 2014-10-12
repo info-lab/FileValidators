@@ -34,6 +34,7 @@ class Validator(object):
         self.is_valid = False
         self.eof = False
         self.bytes_last_valid = -1
+        self.end = False
         self.fd = None
 
     def GetDetails(self):
@@ -50,7 +51,11 @@ class Validator(object):
         """
         Returns the status of the validator after validating a file.
 
-        :return: tuple with is_valid, eof and bytes_last_valid attributes (bool, bool, int)
+        :return: tuple of:
+            * is_valid (bool)
+            * eof (bool)
+            * bytes_last_valid (int)
+            * end (bool)
         """
         return self.is_valid, self.eof, self.bytes_last_valid
             

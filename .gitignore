@@ -1,2 +1,6 @@
 *.pyc
 .idea*
+MANIFEST
+Test*
+test*.py
+*.pstat
