@@ -109,9 +109,10 @@ class PNGValidator(Validator):
             seg_len = None
             seg_crc1 = None
             seg_crc2 = None
-            chunk_length_raw = self._Read(4)
+            data_raw = self._Read(8)
+            chunk_length_raw = data_raw[0: 4]
             self._CountValidBytes(4)
-            chunk_name = self._Read(4)
+            chunk_name = data_raw[4: 8]
             seg_name = chunk_name
             if chunk_name in valid_chunks:  # this is a bit strict with non-standard valid chunks
                 self._CountValidBytes(4)
@@ -120,10 +121,10 @@ class PNGValidator(Validator):
                 if chunk_length > self.max_chunk_length:
                     self.is_valid = False
                     break
-                chunk_data = self._Read(chunk_length)
-                #chunk_data = fd.read(chunk_length)
+                data_raw = self._Read(chunk_length + 4)
+                chunk_data = data_raw[: -4]
                 # we'll only count the data bytes as valid if the CRC is valid
-                chunk_crc_raw = self._Read(4)
+                chunk_crc_raw = data_raw[-4:]
                 chunk_crc = self._ConvertBytes(chunk_crc_raw, "sL")
                 calc_crc = zlib.crc32(chunk_name + chunk_data)
                 seg_crc1 = chunk_crc
