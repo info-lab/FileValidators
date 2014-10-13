@@ -102,7 +102,6 @@ class JPGValidator(Validator):
         self._CountValidBytes(2)
         is_eoi_marker = current_marker == '\xff\xd9'
         while not self.eof and not is_eoi_marker and self.is_valid:
-            entropy_length = 0
             #print current_marker.encode("hex")
             if current_marker != '\xff\xd9':
                 if current_marker == '\xff\xdd':  # this marker has a fixed length of 2, it is the
@@ -147,15 +146,12 @@ class JPGValidator(Validator):
                             potential_marker = bytestring[pos: pos + 2]
                         if not(potential_marker in valid_restart_markers):
                             current_marker = potential_marker
-                            entropy_length += pos
                             seek_marker = False
                             read_next_marker = False
                             self._SetValidBytes(file_tell + adjust_offset + 2)
-                            fd.seek(file_tell + adjust_offset + 2)
+                            self.fd.seek(file_tell + adjust_offset + 2)
                         else:
-                            self._CountValidBytes(2)
-                            entropy_length += pos + 2
-                            adjust_offset += 2
+                            adjust_offset += 4
                             self._CountValidBytes(adjust_offset)
                             bytestring = bytestring[pos + 2:]
                             seek_marker = "\xff" in bytestring
