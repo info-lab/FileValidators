@@ -38,6 +38,6 @@ class ZIPValidator(Validator):
         Since Validate is replaced by zipfile's is_zipfile function, there's no real status we can
         return. Just to make sure nobody changes the values, GetStatus returns a fixed result.
 
-        :return: False, False, -1
+        :return: False, False, -1, False
         """
-        return False, False, -1
+        return False, False, -1, False

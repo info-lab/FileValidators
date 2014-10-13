@@ -62,7 +62,7 @@ class Validator(object):
     def Validate(self, fd):
         """
         Validates a file-like object. Returns True or False. Further information can be obtained
-        through GetStatus().
+        through GetStatus() or GetDetails().
 
         :param fd: a file-like object -- must support file methods: read, seek, tell, etc. Also,
             if its a file, it must be opened for binary reads.
