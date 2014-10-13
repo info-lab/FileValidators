@@ -86,6 +86,7 @@ class JPGValidator(Validator):
         valid_markers = self.markers
         valid_restart_markers = self.restart_markers
         self.fd = fd
+        self.is_valid = True
         self.eof = False
         self.end = False
         self._SetValidBytes(0)

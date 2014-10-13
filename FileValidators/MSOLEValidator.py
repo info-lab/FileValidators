@@ -96,6 +96,7 @@ class MSOLEValidator(Validator):
         sector_size = -1  # i think this four variables should go away once cleanup is over
         # and rest of the initial setup
         self.fd = fd
+        self.is_valid = True
         self._SetValidBytes(0)
         self.eof = False
         self.end = False

@@ -95,6 +95,7 @@ class PNGValidator(Validator):
         self.fd = fd
         valid_chunks_list = self.valid_chunks_list
         valid_chunks = valid_chunks_list[0]
+        self.is_valid = True
         self._SetValidBytes(0)
         self.eof = False
         self.end = False
