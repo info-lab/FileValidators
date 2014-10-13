@@ -57,7 +57,7 @@ class Validator(object):
             * bytes_last_valid (int)
             * end (bool)
         """
-        return self.is_valid, self.eof, self.bytes_last_valid
+        return self.is_valid, self.eof, self.bytes_last_valid, self.end
             
     def Validate(self, fd):
         """
