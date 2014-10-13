@@ -91,83 +91,80 @@ class JPGValidator(Validator):
         self.end = False
         self._SetValidBytes(0)
         self.markers_found = []
-        current_marker = self._Read(2)
-        self.is_valid = current_marker == '\xff\xd8'
-        self._CountValidBytes(2)
+        first_read = self._Read(4)  # we replace 2 consecutive reads for 1 and some logic
+        header_marker = first_read[0:2]
+        current_marker = first_read[2:4]
         if self.is_valid and not self.eof:
             self.markers_found.append(('\xff\xd8', self.fd.tell() - 2, 2))
         read_next_marker = True
-        current_marker = self._Read(2)
-        self.is_valid = self.is_valid and (current_marker in valid_markers)
-        self._CountValidBytes(2)
+        self.is_valid = header_marker == '\xff\xd8' and (current_marker in valid_markers)
+        self._CountValidBytes(4)
         is_eoi_marker = current_marker == '\xff\xd9'
         while not self.eof and not is_eoi_marker and self.is_valid:
             #print current_marker.encode("hex")
-            if current_marker != '\xff\xd9':
-                if current_marker == '\xff\xdd':  # this marker has a fixed length of 2, it is the
-                # only marker that has a fixed length, apart from FFD8 and FFD9.
-                    payload_length = 4
-                else:
-                    payload_length = self._Read(2)
-                    self._CountValidBytes(2)
-                    if not self.eof:
-                        payload_length = self._ConvertBytes(payload_length) - 2
-                    else:
-                        payload_length = 0
-                if self.is_valid and not self.eof:
-                    self.markers_found.append((current_marker, self.fd.tell() - 4,
-                        payload_length + 4))  # we add 2 from the length, and 2 from the marker
-                data = self._Read(payload_length)
-                # data could/should be used to validate, maybe something to do with quantization
-                # tables? should do a deeper research on markers and their data
-                self._CountValidBytes(payload_length)
-                eof = self.eof
-                while not eof and (current_marker == '\xff\xda'):
-                    file_tell = self.fd.tell()
-                    adjust_offset = 0
-                    bytestring = self.fd.read(self._chunksize)  # we don't use self._Read() because
-                    # we might get a weird case where we read the last part of an entropy coded data
-                    # segment plus the EOI marker, and all that is less than self._chunksize.
-                    # In that case, setting the self.eof flag (through self._Read()) would be
-                    # wrong and/or messy.
-                    eof = len(bytestring) < self._chunksize
-                    seek_marker = "\xff" in bytestring
-                    while seek_marker:
-                        pos = bytestring.find("\xff")
-                        adjust_offset += pos
-                        if pos == len(bytestring) - 1:
-                            byte = self._Read(1)
-                            if not self.eof:
-                                potential_marker = "\xff" + byte
-                            else:
-                                potential_marker = "\xff\x00"  # its no longer valid, so we make up
-                                # a marker.
-                        else:
-                            potential_marker = bytestring[pos: pos + 2]
-                        if not(potential_marker in valid_restart_markers):
-                            current_marker = potential_marker
-                            seek_marker = False
-                            read_next_marker = False
-                            self._SetValidBytes(file_tell + adjust_offset + 2)
-                            self.fd.seek(file_tell + adjust_offset + 2)
-                        else:
-                            adjust_offset += 4
-                            self._CountValidBytes(adjust_offset)
-                            bytestring = bytestring[pos + 2:]
-                            seek_marker = "\xff" in bytestring
-                #self._CountValidBytes(entropy_length)
-            else:
+            if current_marker == '\xff\xd9':
                 is_eoi_marker = True
+                break
+            if current_marker == '\xff\xdd':  # this marker has a fixed length of 2, it is the
+            # only marker that has a fixed length, apart from FFD8 and FFD9.
+                payload_length = 4
+            else:
+                payload_length = self._Read(2)
+                self._CountValidBytes(2)
+                if not self.eof:
+                    payload_length = self._ConvertBytes(payload_length) - 2
+                else:
+                    payload_length = 0
+            if self.is_valid and not self.eof:
+                self.markers_found.append((current_marker, self.fd.tell() - 4,
+                    payload_length + 4))  # we add 2 from the length, and 2 from the marker
+            data = self._Read(payload_length)
+            # data could/should be used to validate, maybe something to do with quantization
+            # tables? should do a deeper research on markers and their data
+            self._CountValidBytes(payload_length)
+            eof = self.eof
+            while not eof and (current_marker == '\xff\xda'):
+                file_tell = self.fd.tell()
+                adjust_offset = 0
+                bytestring = self.fd.read(self._chunksize)  # we don't use self._Read() because
+                # we might get a weird case where we read the last part of an entropy coded data
+                # segment plus the EOI marker, and all that is less than self._chunksize.
+                # In that case, setting the self.eof flag (through self._Read()) would be
+                # wrong and/or messy.
+                eof = len(bytestring) < self._chunksize
+                seek_marker = "\xff" in bytestring
+                while seek_marker:
+                    pos = bytestring.find("\xff")
+                    adjust_offset += pos
+                    if pos == len(bytestring) - 1:
+                        byte = self._Read(1)
+                        if not self.eof:
+                            potential_marker = "\xff" + byte
+                        else:
+                            potential_marker = "\xff\x00"  # its no longer valid, so we make up
+                            # a marker.
+                    else:
+                        potential_marker = bytestring[pos: pos + 2]
+                    if not(potential_marker in valid_restart_markers):
+                        current_marker = potential_marker
+                        seek_marker = False
+                        read_next_marker = False
+                        self._SetValidBytes(file_tell + adjust_offset + 2)
+                        self.fd.seek(file_tell + adjust_offset + 2)
+                    else:
+                        adjust_offset += 4
+                        self._CountValidBytes(adjust_offset)
+                        bytestring = bytestring[pos + 2:]
+                        seek_marker = "\xff" in bytestring
             if read_next_marker:
                 current_marker = self._Read(2)
             self.is_valid = current_marker in valid_markers
             self._CountValidBytes(2)
             read_next_marker = True
             is_eoi_marker = current_marker == '\xff\xd9'
-            if is_eoi_marker:
-                self._SetValidBytes(self.bytes_last_valid - 2)  # small fix to valid bytes length
-                self.end = True
-                self.markers_found.append(('\xff\xd9', self.fd.tell() - 2, 2))
+        if is_eoi_marker:
+            self._SetValidBytes(self.bytes_last_valid - 2)  # small fix to valid bytes length
+            self.end = True
+            self.markers_found.append(('\xff\xd9', self.fd.tell() - 2, 2))
         # The last marker should always be EOI/FFD9 and has a fixed length of 0
-        self.eoi_marker = is_eoi_marker
-        return self.is_valid #  and not(self.eof)  # commented out to change behaviour
+        return self.is_valid
