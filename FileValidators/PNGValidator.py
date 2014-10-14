@@ -47,10 +47,10 @@ class PNGValidator(Validator):
             "sL":struct.Struct(">l"),  # signed long
         }
         self.valid_chunks_list = [
-                ["IHDR"],
-                ["PLTE", "IDAT", "IEND", "bKGD", "cHRM", "gAMA", "hIST", "iCCP", "iTXt", "pHYs",
-                 "sBIT", "sPLT", "sRGB", "sTER", "tEXt", "tIME", "tRNS", "zTXt"],
-                []
+                {"IHDR"},
+                {"PLTE", "IDAT", "IEND", "bKGD", "cHRM", "gAMA", "hIST", "iCCP", "iTXt", "pHYs",
+                 "sBIT", "sPLT", "sRGB", "sTER", "tEXt", "tIME", "tRNS", "zTXt"},
+                {}
             ]
         # Append more segment descriptors to valid_chunk_list[1] if you need some special,
         # non-standard PNG to validate.
@@ -79,7 +79,7 @@ class PNGValidator(Validator):
         }
         """
         return {
-            'segments':self.segments,
+            'segments': self.segments,
         }
         
     def Validate(self, fd):
