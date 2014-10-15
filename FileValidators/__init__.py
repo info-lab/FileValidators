@@ -5,4 +5,4 @@ from PNGValidator import PNGValidator
 from SQLiteValidator import SQLiteValidator
 from ZIPValidator import ZIPValidator
 
-__VER__ = "0.5.1"
+__VER__ = "0.5.3"

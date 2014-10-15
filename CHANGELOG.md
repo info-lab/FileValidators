@@ -1,3 +1,9 @@
+Version 0.5.3:
+--------------
+* Small improvements, bug-fixes and cleanup documented in the various commits to the repository.
+* Example/val.py is the new application that shows the use of validators, both from a developer
+and from a users point of view.
+
 Version 0.5.2:
 --------------
 * Finished cleanup on MSOLEValidator and SQLiteValidator. Please bear in mind, however, that the 
