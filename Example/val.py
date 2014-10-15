@@ -39,11 +39,12 @@ class CSVLogger(object):
             self.fd.close()
             self.fd = None
 
-    def Log(self, values):
+    def Log(self, values, flag=None):
         data = ",".join(values) + "\n"
         if self.fd:
             #print data
             self.fd.write(data)
+
 
 class HTMLogger(object):
 
@@ -75,8 +76,16 @@ class HTMLogger(object):
             self.fd.close()
             self.fd = None
 
-    def Log(self, values):
-        auxlist = ['<td style="border: 1px solid silver;">%s</td>' % v for v in values]
+    def Log(self, values, flag=None):
+        if flag is None:
+            auxstyle = 'style="border: 1px solid silver;"'
+        else:
+            if flag:
+                auxstyle = 'style="border: 1px solid silver; background-color: #afa;"'
+            else:
+                auxstyle = 'style="border: 1px solid silver; background-color: #faa;"'
+        auxstring = '<td %s>' % auxstyle + '%s</td>'
+        auxlist = [auxstring % v for v in values]
         data = "<tr>\n" + "\n".join(auxlist) + "\n</tr>\n"
         if self.fd:
             self.fd.write(data)
@@ -152,7 +161,7 @@ def Validate(args):
                 valid, eof, size, end = v.GetStatus()
                 fname = fname_base % filename
                 values = [fname, str(valid), str(eof), str(size), str(end)]
-                logger.Log(values)
+                logger.Log(values, valid)
                 counter_valid += 1 * valid
                 counter_invalid += 1 * (not valid)
     logger.Log(["Valid files:", "%d" % counter_valid])
