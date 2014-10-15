@@ -103,7 +103,7 @@ class PNGValidator(Validator):
         header = self._Read(8)
         self.is_valid = header == '\x89\x50\x4e\x47\x0d\x0a\x1a\x0a'
         self._CountValidBytes(8)
-        while self.is_valid and not self.eof:
+        while self.is_valid and not self.eof and not self.end:
             seg_name = ""
             seg_offset = self.fd.tell()
             seg_len = None
