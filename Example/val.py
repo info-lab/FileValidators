@@ -19,6 +19,7 @@ import datetime
 import FileValidators
 import os
 
+
 # Logger classes
 class CSVLogger(object):
 
@@ -44,6 +45,42 @@ class CSVLogger(object):
             #print data
             self.fd.write(data)
 
+class HTMLogger(object):
+
+    def __init__(self, fpath):
+        self.path = fpath + ".html"
+        self.fd = None
+
+    def Open(self):
+        self.fd = open(self.path, "w")
+        self.fd.write("""
+        <html>
+        <head>
+            <title>CIRA File Validators val.py results log</title>
+        </head>
+        <body>
+            <h3>CIRA File Validators val.py results log</h3>
+            <p>Start time: %s</p>
+            <table style="border: 1px solid silver;">
+        """ % datetime.datetime.now())
+
+    def Close(self):
+        if self.fd:
+            self.fd.write("""
+                </table>
+                <p>End time: %s</p>
+            </body>
+            </html>
+            """ % datetime.datetime.now())
+            self.fd.close()
+            self.fd = None
+
+    def Log(self, values):
+        auxlist = ['<td style="border: 1px solid silver;">%s</td>' % v for v in values]
+        data = "<tr>\n" + "\n".join(auxlist) + "\n</tr>\n"
+        if self.fd:
+            self.fd.write(data)
+
 
 # A few constants:
 DEBUG_BENCHMARK = True
@@ -60,7 +97,7 @@ validators = {
 
 loggers = {
     'csv': CSVLogger,
-    'html': CSVLogger,  # not implemented yet, defaults to csv logger
+    'html': HTMLogger,
 }
 
 
