@@ -128,18 +128,26 @@ class MSOLEValidator(Validator):
             self.msat = array.array("l", cdh[76:512])
             while (msat_secid > -1) and not self.eof:
                 file_location = 512 + (msat_secid * sector_size)
-                self.fd.seek(file_location)  # maybe _Read() should have a location parameter?
+                try:
+                    self.fd.seek(file_location)  # maybe _Read() should have a location parameter?
+                except IOError:
+                    self.is_valid = False
+                    break
                 sector_raw = self._Read(sector_size)
                 if len(sector_raw) < sector_size:
                     break
-                sector = array.array("l", sector_raw)
+                try:
+                    sector = array.array("l", sector_raw)
+                except ValueError:
+                    self.is_valid = False
+                    break
                 msat_secid = sector[-1]
                 self.msat.extend(sector[:-1])
                 self.msat_secids.append(msat_secid)
             # We filter the MSAT to validate its length, everything higher than -1 is a valid
             # MSAT sector - then we compare against the CDH information.
             self.msat = filter(self._FilterCDH, self.msat)
-            self.is_valid = (len(self.msat) == self.sat_secs)
+            self.is_valid = self.is_valid and (len(self.msat) == self.sat_secs)
             #self.is_valid = self.is_valid and (filter(lambda(x): x < -2, msat) == [])
             self.is_valid = self.is_valid and (filter(self._FilterMsat, self.msat) == [])
             if self.is_valid and not self.eof:
@@ -157,12 +165,20 @@ class MSOLEValidator(Validator):
                     x = self.msat[x_index]
                     self._SetValidBytes(file_location + self.sector_size)
                     file_location = 512 + (x * self.sector_size)
-                    self.fd.seek(file_location)
+                    try:
+                        self.fd.seek(file_location)
+                    except IOError:
+                        self.is_valid = False
+                        break
                     sector_raw = self._Read(self.sector_size)
                     if len(sector_raw) < self.sector_size:
                         self.is_valid = False
                         break
-                    sector = array.array("l", sector_raw)  # maybe _ConvertBytes could take this?
+                    try:
+                        sector = array.array("l", sector_raw)  # maybe ConvertBytes could take this?
+                    except ValueError:
+                        self.is_valid = False
+                        break
                     #self.is_valid = filter(lambda(x): x < -4, sector) == []
                     self.is_valid = filter(self._FilterSat, sector) == []
                     for key, val in enumerate(sector, base_sector):
@@ -193,7 +209,7 @@ class MSOLEValidator(Validator):
             last_sat.reverse()
             x = 0
             b = last_sat[x]
-            while b == -1:
+            while b == -1 and x < len(last_sat) - 1:
                 x += 1
                 b = last_sat[x]
             free_secs = x
