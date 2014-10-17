@@ -80,6 +80,7 @@ class PNGValidator(Validator):
         """
         return {
             'segments': self.segments,
+            'extensions': ['.png'],
         }
         
     def Validate(self, fd):

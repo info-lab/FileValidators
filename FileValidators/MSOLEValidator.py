@@ -32,6 +32,7 @@ class MSOLEValidator(Validator):
         """
         super(MSOLEValidator, self).__init__()
         # some initial values in case someone calls GetDetails() early:
+        self.extension = []
         self.sector_size = -1
         self.msat = []
         self.msat_secs = []
@@ -61,6 +62,18 @@ class MSOLEValidator(Validator):
     def _FilterSat(self, x):
         return x < -4
 
+    def _GetExtension(self):
+        self.extension = []
+        if self.is_valid:
+            self.fd.seek(0)
+            data = self.fd.read(self.bytes_last_valid)
+            if "Word Document" in data:
+                self.extension.append(".doc")
+            if "Worksheet" in data:
+                self.extension.append(".xls")
+            if "PowerPoint" in data:
+                self.extension.append(".ppt")
+
     def GetDetails(self):
         """
         Returns a dictionary with detailed information about the last validated file.
@@ -78,6 +91,7 @@ class MSOLEValidator(Validator):
             "msat_secs": self.msat_secs,
             "msat_secids": self.msat_secids,
             "sat_secs": self.sat_secs,
+            "extensions": self.extension,
         }
         
     def Validate(self, fd):
@@ -88,6 +102,7 @@ class MSOLEValidator(Validator):
         :return: True on valid MS-OLE, False otherwise (bool)
         """
         # GetDetails cleanup of variables
+        self.extension = []
         self.sector_size = -1
         self.msat = []
         self.msat_secs = -1
@@ -126,8 +141,13 @@ class MSOLEValidator(Validator):
             self.msat_secids.append(msat_secid)
             self.msat_secs = self._ConvertBytes(cdh[72:76], "sL")
             self.msat = array.array("l", cdh[76:512])
+            file_location = -1
             while (msat_secid > -1) and not self.eof:
-                file_location = 512 + (msat_secid * sector_size)
+                new_location = 512 + (msat_secid * sector_size)
+                if new_location <= file_location:
+                    self.is_valid = False
+                    break
+                file_location = new_location
                 try:
                     self.fd.seek(file_location)  # maybe _Read() should have a location parameter?
                 except IOError:
@@ -221,4 +241,5 @@ class MSOLEValidator(Validator):
             self.end = True
         else:
             self.is_valid = False
+        self._GetExtension()
         return self.is_valid  # and not(self.eof) # this was semantically flawed

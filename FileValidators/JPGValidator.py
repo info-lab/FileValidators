@@ -74,6 +74,7 @@ class JPGValidator(Validator):
         """
         return {
             "segments": self.markers_found,
+            'extensions': ['.jpg'],
         }
     
     def Validate(self, fd):

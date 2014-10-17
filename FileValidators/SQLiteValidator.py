@@ -305,6 +305,7 @@ class SQLiteValidator(Validator):
             'user_version ': self.user_version,
             'incremental_vacuum ': self.incremental_vacuum,
             'version_valid_for_number ': self.version_valid_for_number,
+            'extensions': ['.sqlite'],
         }
 
     def Validate(self, fd):

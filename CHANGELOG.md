@@ -1,3 +1,13 @@
+Version 0.5.4:
+--------------
+* Tests against a real case showed room for improvement in MSOLEValidator.
+* Added 'extensions' to the GetDetails() dictionary. This is useful in cases such as MS-OLE, where
+the same format has sub-formats which should be identified.
+    * This was added as a list of extensions in case the sub-format test is not conclusive.
+* All validators (except ZIPValidator) support the 'extensions' keyword in GetDetails().
+* Examples/rename.py is new utility that moves/renames valid files according to their real
+extension, as far as the validator can tell. 
+
 Version 0.5.3:
 --------------
 * Small improvements, bug-fixes and cleanup documented in the various commits to the repository.
