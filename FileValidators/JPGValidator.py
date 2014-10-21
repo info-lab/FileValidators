@@ -37,7 +37,7 @@ class JPGValidator(Validator):
         """
         super(JPGValidator, self).__init__()
         self.converter = struct.Struct(">H")
-        self._chunksize = 2048  # this was the best performing chunk size in our tests. YMMV.
+        self._chunksize = 2048  # should be fixed by now
         self.markers = {'\xff\xc0', '\xff\xc1', '\xff\xc2', '\xff\xc3', '\xff\xc4', '\xff\xc5',
             '\xff\xc6', '\xff\xc7', '\xff\xc8', '\xff\xc9', '\xff\xca', '\xff\xcb', '\xff\xcc',
             '\xff\xcd', '\xff\xce', '\xff\xcf', '\xff\xd0', '\xff\xd1', '\xff\xd2', '\xff\xd3',
@@ -95,10 +95,10 @@ class JPGValidator(Validator):
         first_read = self._Read(4)  # we replace 2 consecutive reads for 1 and some logic
         header_marker = first_read[0:2]
         current_marker = first_read[2:4]
-        if self.is_valid and not self.eof:
-            self.markers_found.append(('\xff\xd8', self.fd.tell() - 2, 2))
         read_next_marker = True
         self.is_valid = header_marker == '\xff\xd8' and (current_marker in valid_markers)
+        if self.is_valid and not self.eof:
+            self.markers_found.append(('\xff\xd8', self.fd.tell() - 4, 2))
         self._CountValidBytes(4)
         is_eoi_marker = current_marker == '\xff\xd9'
         while not self.eof and not is_eoi_marker and self.is_valid:
@@ -153,7 +153,7 @@ class JPGValidator(Validator):
                         self._SetValidBytes(file_tell + adjust_offset + 2)
                         self.fd.seek(file_tell + adjust_offset + 2)
                     else:
-                        adjust_offset += 4
+                        adjust_offset += 2
                         self._CountValidBytes(adjust_offset)
                         bytestring = bytestring[pos + 2:]
                         seek_marker = "\xff" in bytestring
