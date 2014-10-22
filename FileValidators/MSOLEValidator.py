@@ -69,10 +69,12 @@ class MSOLEValidator(Validator):
             data = self.fd.read(self.bytes_last_valid)
             if "Word Document" in data:
                 self.extension.append(".doc")
-            if "Worksheet" in data:
+            if "Worksheet" in data:  # or "Workbook" in data:  # need to confirm this
                 self.extension.append(".xls")
             if "PowerPoint" in data:
                 self.extension.append(".ppt")
+            # should change all this comparisons for one regex that matches and get the result from
+            # a dict -- that should have better performance, though i doubt this might be a problem.
 
     def GetDetails(self):
         """
