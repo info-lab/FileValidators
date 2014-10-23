@@ -159,7 +159,7 @@ class GIFValidator(Validator):
                 self.end = True
                 self.blocks.append(("Trailer", block_pos))
                 return self.is_valid  # which as far as i can tell, will always be True
-            if block_id == "!":
+            elif block_id == "!":
                 # how many subtypes of extension blocks are? 4:
                 # plaintext (0x01), application (0xff), comment (0xfe), graphics control (0xf9)
                 # each extension block subtype has a "header" that defines some information and
@@ -190,16 +190,16 @@ class GIFValidator(Validator):
                 if self.eof:
                     return self.is_valid
                 sub_block_bytes += 9
-                left = self._ConvertBytes(buff[0: 2], "uH")
-                top = self._ConvertBytes(buff[2: 4], "uH")
-                width = self._ConvertBytes(buff[4: 6], "uH")
-                height = self._ConvertBytes(buff[6: 8], "uH")
+                #left = self._ConvertBytes(buff[0: 2], "uH")
+                #top = self._ConvertBytes(buff[2: 4], "uH")
+                #width = self._ConvertBytes(buff[4: 6], "uH")
+                #height = self._ConvertBytes(buff[6: 8], "uH")
                 packed_info = ord(buff[8])
                 #print "Image: %d, %d, %d, %d" % (left, top, width, height)
                 # i'm thinking of validating left, top, width and height, but i'm a bit unsure if
                 # there's anything standard about that.
                 local_table_flag = bool(packed_info & 0b10000000)
-                local_table_size = 2 << (packed_info % 0b00000111)
+                local_table_size = 2 << (packed_info & 0b00000111)
                 if local_table_flag:
                     local_table = self._Read(3 * local_table_size)
                     sub_block_bytes += local_table_size
