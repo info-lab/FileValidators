@@ -1,3 +1,7 @@
+Version 0.5.5:
+--------------
+* GIFValidator implemented and tested against a simple test suite.
+
 Version 0.5.4:
 --------------
 * Tests against a real case showed room for improvement in MSOLEValidator.
