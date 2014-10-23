@@ -110,6 +110,7 @@ class GIFValidator(Validator):
             "pixel_aspect": self.pixel_aspect,
             "color_table": self.color_table,
             "blocks": self.blocks,
+            'extensions': ['.gif'],
         }
         
     def Validate(self, fd):
