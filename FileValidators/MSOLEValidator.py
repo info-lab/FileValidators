@@ -34,10 +34,12 @@ class MSOLEValidator(Validator):
         # some initial values in case someone calls GetDetails() early:
         self.extension = []
         self.sector_size = -1
+        self.sat = []
         self.msat = []
         self.msat_secs = []
         self.msat_secids = []
         self.sat_secs = -1
+        self.max_sector = -1
         self.converters = {  # this dictionary defines the behaviour of _ConvertBytes, DO NOT TOUCH!
             'sH': struct.Struct("<h"),
             'sL': struct.Struct("<l"),
@@ -60,7 +62,7 @@ class MSOLEValidator(Validator):
         return x < -2
 
     def _FilterSat(self, x):
-        return x < -4
+        return x < -4 or x > self.max_sector
 
     def _GetExtension(self):
         self.extension = []
@@ -90,10 +92,12 @@ class MSOLEValidator(Validator):
         return {
             "sector_size": self.sector_size,
             "msat": self.msat,
+            "sat": self.sat,
             "msat_secs": self.msat_secs,
             "msat_secids": self.msat_secids,
             "sat_secs": self.sat_secs,
             "extensions": self.extension,
+            "max_sector": self.max_sector,
         }
         
     def Validate(self, fd):
@@ -106,10 +110,12 @@ class MSOLEValidator(Validator):
         # GetDetails cleanup of variables
         self.extension = []
         self.sector_size = -1
+        self.sat = []
         self.msat = []
         self.msat_secs = -1
         self.msat_secids = []
         self.sat_secs = -1
+        self.max_sector = -1
         sector_size = -1  # i think this four variables should go away once cleanup is over
         # and rest of the initial setup
         self.fd = fd
@@ -169,6 +175,7 @@ class MSOLEValidator(Validator):
             # We filter the MSAT to validate its length, everything higher than -1 is a valid
             # MSAT sector - then we compare against the CDH information.
             self.msat = filter(self._FilterCDH, self.msat)
+            self.max_sector = len(self.msat) * (self.sector_size / 4)
             self.is_valid = self.is_valid and (len(self.msat) == self.sat_secs)
             #self.is_valid = self.is_valid and (filter(lambda(x): x < -2, msat) == [])
             self.is_valid = self.is_valid and (filter(self._FilterMsat, self.msat) == [])
@@ -177,7 +184,8 @@ class MSOLEValidator(Validator):
                 # they are also present in the MSAT. If we find a mismatch, that means we have a
                 # corrupt file.
                 # We also check for -4 in the SAT, which are MSAT sectors. Also, as a first check
-                # we look for lower than -4 values, which would also indicate a corrupt file.
+                # we look for values lower than -4 or higher than self.max_sector, because they
+                # are signs of a corrupt file.
                 base_sector = 0
                 base_sector_inc = self.sector_size / 4
                 x_index = 0
@@ -203,6 +211,7 @@ class MSOLEValidator(Validator):
                         break
                     #self.is_valid = filter(lambda(x): x < -4, sector) == []
                     self.is_valid = filter(self._FilterSat, sector) == []
+                    self.sat.extend(sector)
                     for key, val in enumerate(sector, base_sector):
                         if val == -3:
                             if not(key in self.msat):
