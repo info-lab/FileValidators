@@ -35,6 +35,7 @@ class MSOLEValidator(Validator):
         self.extension = []
         self.sector_size = -1
         self.sat = []
+        self.sat_dict = {}
         self.msat = []
         self.msat_secs = []
         self.msat_secids = []
@@ -111,6 +112,7 @@ class MSOLEValidator(Validator):
         self.extension = []
         self.sector_size = -1
         self.sat = []
+        self.sat_dict = {}
         self.msat = []
         self.msat_secs = -1
         self.msat_secids = []
@@ -205,12 +207,18 @@ class MSOLEValidator(Validator):
                         self.is_valid = False
                         break
                     try:
-                        sector = array.array("l", sector_raw)  # maybe ConvertBytes could take this?
+                        sector = array.array("l", sector_raw)
                     except ValueError:
                         self.is_valid = False
                         break
                     #self.is_valid = filter(lambda(x): x < -4, sector) == []
                     self.is_valid = filter(self._FilterSat, sector) == []
+                    sat_len = len(self.sat_dict)
+                    clean_sector = filter(self._FilterCDH, sector)
+                    self.sat_dict.update({}.fromkeys(clean_sector, True))
+                    self.is_valid = self.is_valid and len(self.sat_dict) == sat_len + len(clean_sector)
+                    if not self.is_valid:
+                        break
                     self.sat.extend(sector)
                     for key, val in enumerate(sector, base_sector):
                         if val == -3:
