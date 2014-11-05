@@ -36,6 +36,10 @@ we diverged from Garfinkel's original design, so the interfaces are not identica
 differences are:
 
 * Validators work on file objects instead of strings/buffers.
+    * We are now working on porting existing validators to a new implementation which works either
+    with files or string buffers.
+    * It will not break existing code, but allow for faster validators in general, and also simpler
+    code.
 * Validator.Validate() method returns True or False. Additional information is queried to the
   validator through GetStatus() and GetDetails().
     * GetStatus() returns validating related information, including flags on EOF, file format end of

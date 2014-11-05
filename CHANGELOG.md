@@ -1,3 +1,21 @@
+Version 0.5.6:
+--------------
+* Tests with Orthrus proved the current architecture to be slow for carver integration: 
+    * Current file-oriented design means a StringIO object has to be created for every test in the
+    carver.
+    * That means reading the file in the first place, and then creating the object.
+    * And using method calls to another object for every read operation.
+* The file-oriented design also brought its own problems in JPGValidator and GIFValidator.
+* The new PNGValidator is buffer-oriented and is 10 to 66% faster than the old code:
+    * 10% faster for small files read from disk
+    * 33% faster for normal to big files read from disk
+    * 66% faster when validating a string -- this also means that the carver won't have to create a
+    StringIO object, which will aso save time for the carver.
+* The new architecture will be tested as the validators are ported to it. The interface will not
+change, but now accepts strings.
+* As of now, it works on whole files loaded to memory. Further improvements should allow to validate
+large files in chunks of a given size.
+
 Version 0.5.5:
 --------------
 * GIFValidator implemented and tested against a simple test suite.

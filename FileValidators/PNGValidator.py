@@ -55,6 +55,8 @@ class PNGValidator(Validator):
         # Append more segment descriptors to valid_chunk_list[1] if you need some special,
         # non-standard PNG to validate.
         self.segments = []
+        self.data = ""
+        self.pos = 0
 
     def _ConvertBytes(self, value, t):
         """
@@ -66,6 +68,13 @@ class PNGValidator(Validator):
         :return: unpacked value (int)
         """
         return self.converters[t].unpack(value)[0]
+
+    def _Read(self, length):
+        ret = self.data[self.pos: self.pos + length]
+        if len(ret) < length:
+            self.eof = True
+        self.pos += length
+        return ret
 
     def GetDetails(self):
         """
@@ -82,7 +91,7 @@ class PNGValidator(Validator):
             'segments': self.segments,
             'extensions': ['.png'],
         }
-        
+
     def Validate(self, fd):
         """
         Validates a file-like object to determine if its a valid PNG file.
@@ -93,7 +102,13 @@ class PNGValidator(Validator):
         # Need to make a big clean up of this code, PNG was the first validator implemented, because
         # of the format being so clear, and simple. Also, thanks to CRC blocks at the end of
         # segments, is the most precise validator implemented yet.
-        self.fd = fd
+        self.pos = 0
+        if type(fd) == file:
+            self.data = fd.read()
+        elif type(fd) == str:
+            self.data = fd
+        else:
+            raise Exception("Argument must be either a file or a string.")
         valid_chunks_list = self.valid_chunks_list
         valid_chunks = valid_chunks_list[0]
         self.is_valid = True
@@ -106,7 +121,7 @@ class PNGValidator(Validator):
         self._CountValidBytes(8)
         while self.is_valid and not self.eof and not self.end:
             seg_name = ""
-            seg_offset = self.fd.tell()
+            seg_offset = self.pos
             seg_len = None
             seg_crc1 = None
             seg_crc2 = None
@@ -139,7 +154,7 @@ class PNGValidator(Validator):
                     valid_chunks = valid_chunks_list[1]
                 elif chunk_name == "IEND":
                     valid_chunks = valid_chunks_list[2]
-                    self._CountValidBytes(1)  # small fix
+                    #self._CountValidBytes(1)  # this seems to have been wrong in the 1st place
                     self.end = True
             else:
                 is_valid = chunk_name == ""  # benefit of doubt for an incomplete file
