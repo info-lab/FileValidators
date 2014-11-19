@@ -28,7 +28,7 @@ class SQLiteValidator(Validator):
         """
         super(SQLiteValidator, self).__init__()
         self._Cleanup()
-    
+
     def _ConvertBytes(self, value, size, big_endian=True):
         ret_value = array.array(size, value)
         if big_endian:
@@ -66,7 +66,16 @@ class SQLiteValidator(Validator):
         self.user_version = ""
         self.incremental_vacuum = -1
         self.version_valid_for_number = -1
-    
+        self.data = ""
+        self.pos = 0
+
+    def _Read(self, length):
+        ret = self.data[self.pos: self.pos + length]
+        if len(ret) < length:
+            self.eof = True
+        self.pos += length
+        return ret
+
     def _ValidateHeader(self):
         """
         Validates the header of a SQLite 3 Format file. Returns nothing, just changes internal
@@ -100,7 +109,7 @@ class SQLiteValidator(Validator):
         #print "self.page_count: %d" % (self.page_count)
         #print "file_change_counter: %d" % (file_change_counter)
         #print "version_valid_for_number: %d" % (version_valid_for_number)
-        self.is_valid = ((header_descriptor == "SQLite format 3\x00") and 
+        self.is_valid = ((header_descriptor == "SQLite format 3\x00") and
             (self.file_format_write_version in [1, 2]) and
             (self.file_format_read_version in [1, 2]) and
             (self.maximum_payload_fraction == 64) and
@@ -110,7 +119,7 @@ class SQLiteValidator(Validator):
             (self.database_encoding in [1, 2, 3]) and
             (reserved_for_expansion == ('\x00' * 24)))
         # end of _ValidateHeader, does not return anything.
-        
+
     def _ValidatePages(self):
         """
         Validates the pages of a SQLite 3 Format file. Returns nothing, just changes internal
@@ -129,7 +138,8 @@ class SQLiteValidator(Validator):
         if self.largest_root_vacuum > 0:
             if not self.is_valid_page_count:
                 # we have ptrMap pages, so we can find out the real page_count and fix it
-                self.fd.seek(self.page_size)
+                #self.fd.seek(self.page_size)
+                self.pos = self.page_size
                 page = self._Read(self.page_size)
                 ptr_page = 3 + ptr_map_pages_pointers
                 ptr_map_eof = False
@@ -161,7 +171,8 @@ class SQLiteValidator(Validator):
                             # it's a valid pages record
                             new_page_count += 1
                         record_num += 1
-                    self.fd.seek((ptr_page - 1) * self.page_size)
+                    #self.fd.seek((ptr_page - 1) * self.page_size)
+                    self.pos = (ptr_page - 1) * self.page_size
                     page = self._Read(self.page_size)
                     ptr_page += ptr_map_pages_pointers + 1
                     new_ptr_page = True
@@ -182,7 +193,8 @@ class SQLiteValidator(Validator):
             free_pages = []
             freelist_trunks = self.freelist_trunks
             current_page = 1
-            self.fd.seek(self.page_size)
+            #self.fd.seek(self.page_size)
+            self.pos = self.page_size
             page = "true"
             while self.is_valid and page and (current_page < self.page_count):
                 page = self._Read(self.page_size)
@@ -245,9 +257,9 @@ class SQLiteValidator(Validator):
                 pass
             #end if ptr_map_pages
         #end if self.valid_page_count
-        
+
     # end of _ValidatePages, does not return anything.
-    
+
     def _ValidateDecompress(self):
         """
         Validates the structure of a SQLite 3 Format file. Returns nothing, just changes internal
@@ -309,8 +321,13 @@ class SQLiteValidator(Validator):
         }
 
     def Validate(self, fd):
-        self.fd = fd
         self._Cleanup()
+        if type(fd) == file:
+            self.data = fd.read()
+        elif type(fd) == str:
+            self.data = fd
+        else:
+            raise Exception("Argument must be either a file or a string.")
         self._ValidateHeader()
         self._ValidatePages()
         self._ValidateDecompress()

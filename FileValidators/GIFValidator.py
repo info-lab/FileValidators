@@ -51,6 +51,8 @@ class GIFValidator(Validator):
             "\xfe": "Comment Extension",
             "\xf9": "Graphics Control Extension",
         }
+        self.data = ""
+        self.pos = 0
 
     def _Cleanup(self):
         """
@@ -70,6 +72,8 @@ class GIFValidator(Validator):
         self.pixel_aspect = -1
         self.color_table = []
         self.blocks = []
+        self.data = ""
+        self.pos = 0
 
     def _ConvertBytes(self, value, t):
         """
@@ -80,6 +84,13 @@ class GIFValidator(Validator):
         :return: unpacked value (int)
         """
         return self.converters[t].unpack(value)[0]
+
+    def _Read(self, length):
+        ret = self.data[self.pos: self.pos + length]
+        if len(ret) < length:
+            self.eof = True
+        self.pos += length
+        return ret
 
     def GetDetails(self):
         """
@@ -113,7 +124,12 @@ class GIFValidator(Validator):
         # Being a new validator, we're trying some different things here to see how they behave
         # and if they're worth porting to the others -- for example, return-on-invalid.
         self._Cleanup()
-        self.fd = fd
+        if type(fd) == file:
+            self.data = fd.read()
+        elif type(fd) == str:
+            self.data = fd
+        else:
+            raise Exception("Argument must be either a file or a string.")
         buff = self._Read(13)
         signature = buff[0: 3]
         version = buff[3: 6]
@@ -146,7 +162,7 @@ class GIFValidator(Validator):
             self._CountValidBytes(3 * self.color_table_size)
         sub_block_bytes = 0  # this is needed for a sub-block reading
         while self.is_valid and not self.eof and not self.end:
-            block_pos = self.fd.tell()
+            block_pos = self.pos
             block_id = self._Read(1)
             self.is_valid = block_id in {",", "!", ";"}
             self._CountValidBytes(1 + sub_block_bytes)
@@ -179,7 +195,7 @@ class GIFValidator(Validator):
                     except TypeError:
                         return self.is_valid
                     #data = self._Read(eb_size)
-                    self.fd.seek(eb_size, 1)
+                    self.pos += eb_size
                     sub_block_bytes += eb_size + 1
                 # comment extension has no sub-header, it jumps straight to data sub-blocks, so
                 # there's no need to consider it further.
@@ -203,11 +219,9 @@ class GIFValidator(Validator):
                 if local_table_flag:
                     local_table_size = 2 << (packed_info & 0b00000111)
                     #local_table = self._Read(3 * local_table_size)
-                    self.fd.seek((3 * local_table_size) + 1, 1)
+                    self.pos += (3 * local_table_size)
                     sub_block_bytes += local_table_size
-                else:
-                    #lzw_min = self._Read(1)
-                    self.fd.seek(1, 1)
+                self.pos += 1
                 sub_block_bytes += 1
             # and now we must interpret the sub-blocks until we find one with length 0, and then
             # we'll be standing in a block identifier.
@@ -223,7 +237,7 @@ class GIFValidator(Validator):
                     return self.is_valid
                 #print "sb_size: %d" % (sb_size)
                 #data = self._Read(sb_size)
-                self.fd.seek(sb_size, 1)
+                self.pos += sb_size
                 #print "%s" % (data.encode("hex"))
                 sub_block_bytes += sb_size
             # now we have read all the data sub-blocks and our file pointer should be standing on

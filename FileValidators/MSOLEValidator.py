@@ -45,6 +45,8 @@ class MSOLEValidator(Validator):
             'sH': struct.Struct("<h"),
             'sL': struct.Struct("<l"),
         }
+        self.data = ""
+        self.pos = 0
 
     def _ConvertBytes(self, value, t):
         """
@@ -68,16 +70,23 @@ class MSOLEValidator(Validator):
     def _GetExtension(self):
         self.extension = []
         if self.is_valid:
-            self.fd.seek(0)
-            data = self.fd.read(self.bytes_last_valid)
-            if "Word Document" in data:
+            #self.fd.seek(0)
+            #data = self.fd.read(self.bytes_last_valid)
+            if "Word Document" in self.data:
                 self.extension.append(".doc")
-            if "Worksheet" in data:  # or "Workbook" in data:  # need to confirm this
+            if "Worksheet" in self.data:  # or "Workbook" in data:  # need to confirm this
                 self.extension.append(".xls")
-            if "PowerPoint" in data:
+            if "PowerPoint" in self.data:
                 self.extension.append(".ppt")
             # should change all this comparisons for one regex that matches and get the result from
             # a dict -- that should have better performance, though i doubt this might be a problem.
+
+    def _Read(self, length):
+        ret = self.data[self.pos: self.pos + length]
+        if len(ret) < length:
+            self.eof = True
+        self.pos += length
+        return ret
 
     def GetDetails(self):
         """
@@ -120,7 +129,13 @@ class MSOLEValidator(Validator):
         self.max_sector = -1
         sector_size = -1  # i think this four variables should go away once cleanup is over
         # and rest of the initial setup
-        self.fd = fd
+        self.pos = 0
+        if type(fd) == file:
+            self.data = fd.read()
+        elif type(fd) == str:
+            self.data = fd
+        else:
+            raise Exception("Argument must be either a file or a string.")
         self.is_valid = True
         self._SetValidBytes(0)
         self.eof = False
@@ -159,7 +174,8 @@ class MSOLEValidator(Validator):
                     break
                 file_location = new_location
                 try:
-                    self.fd.seek(file_location)  # maybe _Read() should have a location parameter?
+                    self.pos = file_location
+                    #self.fd.seek(file_location)  # maybe _Read() should have a location parameter?
                 except IOError:
                     self.is_valid = False
                     break
@@ -198,7 +214,8 @@ class MSOLEValidator(Validator):
                     self._SetValidBytes(file_location + self.sector_size)
                     file_location = 512 + (x * self.sector_size)
                     try:
-                        self.fd.seek(file_location)
+                        self.pos = file_location
+                        #self.fd.seek(file_location)
                     except IOError:
                         self.is_valid = False
                         break

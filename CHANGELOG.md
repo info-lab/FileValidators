@@ -1,3 +1,20 @@
+Version 0.6:
+------------
+* So far, reimplementing means reading the whole file at the beginning of the Validate method and
+then working from that buffer. All validators work with a buffer oriented implementation now. This
+has resulted in the following performance changes:
+    * GIFValidator reimplemented ()  - 1.1 to 3x faster
+    * MSOLEValidator reimplemented.  - 3% to 20% faster
+    * SQLiteValidator reimplemented. - 27% slower to 129% faster
+    * JPGValidator reimplemented.    - 47% to 82% faster
+* Due to the type check added at the beginning of the Validate method, validators will only work
+against files (no StringIO objects) and strings (Python base strings, not bytearrays, etc).
+    * This shouldn't be a major problem, since working from a string has made it unnecessary to
+    use StringIO objects.
+* The new design should allow for new, faster algorithms.
+* Work is needed to implement a way to validate chunks of files, so that really big files (gigabyte
+sized and bigger) can be validated without causing out-of-memory faults.
+
 Version 0.5.6:
 --------------
 * Tests with Orthrus proved the current architecture to be slow for carver integration: 
