@@ -35,11 +35,6 @@ framework in C++ that we decided to adapt to Python. Due to language differences
 we diverged from Garfinkel's original design, so the interfaces are not identical. Some of the
 differences are:
 
-* Validators work on file objects instead of strings/buffers.
-    * We are now working on porting existing validators to a new implementation which works either
-    with files or string buffers.
-    * It will not break existing code, but allow for faster validators in general, and also simpler
-    code.
 * Validators work on file or string objects.
     * The new implementation reads all the file into an internal buffer, and validates the content.
     * It has broken some existing code in Orthrus, which was very implementation-dependent.
