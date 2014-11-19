@@ -152,7 +152,7 @@ def Validate(args):
     counter_invalid = 0
     for root, dirs, files in os.walk(path):
         for filename in files:
-            extension = os.path.splitext(filename)[1]
+            extension = os.path.splitext(filename)[1].lower()
             if extension in validators.keys():
                 fd = open(os.path.join(root, filename), "rb", 1048576)
                 v = validators[extension]
