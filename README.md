@@ -40,6 +40,10 @@ differences are:
     with files or string buffers.
     * It will not break existing code, but allow for faster validators in general, and also simpler
     code.
+* Validators work on file or string objects.
+    * The new implementation reads all the file into an internal buffer, and validates the content.
+    * It has broken some existing code in Orthrus, which was very implementation-dependent.
+    * All the Example programs work correctly with the new implementation.
 * Validator.Validate() method returns True or False. Additional information is queried to the
   validator through GetStatus() and GetDetails().
     * GetStatus() returns validating related information, including flags on EOF, file format end of
