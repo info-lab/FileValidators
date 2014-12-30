@@ -14,6 +14,8 @@
 
 # coding=utf-8
 
+# Kindly contributed by Felipe Evans
+
 """
     Only ascii character.
     @TODO Detect if it is ANSI, UTF-8 or UNICODE. 
@@ -30,7 +32,7 @@ from Validator import Validator
 class TXTValidator(Validator):
     """
     Class that validates if an object is a valid TXT file in spanish. 
-	validate al text from 32 to 128, \n, \t  and character with tilde.
+    validate al text from 32 to 128, \n, \t  and character with tilde.
     """
     def __init__(self):
         """
@@ -79,7 +81,7 @@ class TXTValidator(Validator):
         :param fd: file descriptor (file-like)
         :return: True on valid TXT, False otherwise (bool)
         """
-	valid_list = []
+        valid_list = []
         self.pos = 0
         if type(fd) == file:
             self.data = fd.read()
@@ -87,34 +89,34 @@ class TXTValidator(Validator):
             self.data = fd
         else:
             raise Exception("Argument must be either a file or a string.")
-	"""
-	    Standar Character
-	"""
-	for i in range(32, 126+1):
-	    valid_list.append(chr(i)),
-	valid_list.append("\n")
-	valid_list.append("\t")
-	
-	"""
-	    Extended Character
-	"""
-	for i in range(128, 168+1):
-	    valid_list.append(chr(i)),
-	
-        self.is_valid = True
-        self._SetValidBytes(0)
-        self.eof = False
-        self.end = False
-	print "Start \n"
-	text = self._Read(1)
+        """
+            Standar Character
+        """
+        for i in range(32, 126+1):
+            valid_list.append(chr(i)),
+        valid_list.append("\n")
+        valid_list.append("\t")
+
+        """
+            Extended Character
+        """
+        for i in range(128, 168+1):
+            valid_list.append(chr(i)),
+
+            self.is_valid = True
+            self._SetValidBytes(0)
+            self.eof = False
+            self.end = False
+        print "Start \n"
+        text = self._Read(1)
 
         while self.is_valid and not self.eof and not self.end:
-	    print "%s " % (text)
-	    if text in valid_list:
-		self.is_valid = True
-		self._CountValidBytes(1)
-	    else:
-		self.is_valid = False
-    	    text = self._Read(1)
+            print "%s " % (text)
+            if text in valid_list:
+                self.is_valid = True
+                self._CountValidBytes(1)
+            else:
+                self.is_valid = False
+                text = self._Read(1)
 
-	return self.is_valid
+        return self.is_valid

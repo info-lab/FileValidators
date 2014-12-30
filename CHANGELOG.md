@@ -1,3 +1,12 @@
+Version 0.6.1:
+--------------
+* Merged Pull request #1.
+* Added FileValidators/xp directory. Here you can find experimental validators which may not work
+in the same fashion as the other validators. Eventually they may be moved to the main module.
+    * ZIPValidator2 is in need of cleanup and tests before it can replace ZIPValidator. Also, it is
+    based in the old design that reads from file instead of buffer.
+    * LNKValidator needs a validation algorithm and tests before it can be moved out.
+
 Version 0.6:
 ------------
 * So far, reimplementing means reading the whole file at the beginning of the Validate method and
