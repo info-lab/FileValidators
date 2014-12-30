@@ -141,7 +141,9 @@ class JPGValidator(Validator):
             # tables? should do a deeper research on markers and their data
             self._CountValidBytes(payload_length)
             eof = self.eof
-            while not eof and (current_marker == '\xff\xda'):
+            pos = 0
+            while not eof and (current_marker == '\xff\xda') and pos >= 0:
+                #print "self.pos: %d, pos: %d..." % (self.pos, pos),
                 file_tell = self.pos
                 adjust_offset = 0
                 #bytestring = self.fd.read(self._chunksize)  # we don't use self._Read() because
