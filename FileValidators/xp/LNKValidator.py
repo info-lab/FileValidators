@@ -20,7 +20,7 @@ from Validator import Validator
 
 class LNKValidator(Validator):
     """
-    Class that validates an object to determine if it is a valid JPG file.
+    Class that validates an object to determine if it is a valid MS-SHLLINK (LNK) file.
     """
 
     def __init__(self):
