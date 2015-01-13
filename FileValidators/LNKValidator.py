@@ -69,10 +69,11 @@ class LNKValidator(Validator):
         valid_delta = 2
         itemid_size, = struct.unpack("<H", self._Read(2))
         while itemid_size > 0:
+            valid_delta += itemid_size + 2 # it may be counting an extra 2 bytes
             item = self._Read(itemid_size - 2)
             self.details["item_list"].append(item)
             itemid_size, = struct.unpack("<H", self._Read(2))
-            valid_delta += itemid_size + 2
+        print "ValidDelta(IDList): %d" % valid_delta
         self._CountValidBytes(valid_delta)
 
     def _LinkInfo(self):
@@ -85,9 +86,10 @@ class LNKValidator(Validator):
         self.details["linkinfo"] = sizes_raw + self._Read(lnkinfo_size - 8)
         self.details["linkinfo_header"] = self.details["linkinfo"][:lnkinfo_header_size]
         # add checks for the LinkInfoHeader
+        print "ValidDelta(LinkInfo): %d" % lnkinfo_size
         self._CountValidBytes(lnkinfo_size)
 
-    def _Strings(self, string_flags):
+    def _Strings(self, string_flags, is_unicode):
         """
         Internal method! Called from Validate when a Strings section is present. Reads and extracts
         the strings from it.
@@ -105,7 +107,6 @@ class LNKValidator(Validator):
         ret = {}
         valid_delta = 0
         size_mult = 1
-        is_unicode = self.details["Flags"]["IsUnicode"]
         if is_unicode:
             size_mult = 2
         for index, value in enumerate(string_flags):
@@ -119,6 +120,7 @@ class LNKValidator(Validator):
                 ret[name] = string
                 valid_delta += 2 + size
         self._CountValidBytes(valid_delta)
+        print "ValidDelta(Strings): %d" % valid_delta
         self.details["Strings"] = ret
 
     def _MSTimestamp(self, timestamp):
@@ -167,10 +169,14 @@ class LNKValidator(Validator):
         self.details["CTime"] = self._MSTimestamp(shlheader[36:44])
         self.details["WTime"] = self._MSTimestamp(shlheader[44:52])
         fsize, icoindex, shwcmd, hotkey = struct.unpack("<LLL2s", shlheader[52:66])
+        reserve1, reserve2, reserve3 = struct.unpack("<HLL", shlheader[66:76])
         self.details["FileSize"] = fsize
         self.details["IconIndex"] = icoindex
         self.details["ShowCommand"] = shwcmd
         self.details["Hotkey"] = hotkey
+        self.details["Reserved1"] = reserve1
+        self.details["Reserved2"] = reserve2
+        self.details["Reserved3"] = reserve3
         flags = {
             "HasLinkTargetIDList": bool(flags_raw & 0x00000001),
             "HasLinkInfo": bool(flags_raw & 0x00000002),
@@ -219,13 +225,19 @@ class LNKValidator(Validator):
             "Encrypted": bool(fileatt_raw & 0x4000),
         }
         hks = struct.unpack("<BB", hotkey)
-        self.is_valid = magic_header == self.magic and \
-            fileatt_raw < 32768 and \
-            shwcmd in {0x01, 0x03, 0x07} and \
-            (hks == (0, 0) or (0x30 <= hks[0] <= 0x91 and hks[1] in {1, 2, 4}))
+        self.is_valid = (  # this way we can comment each line :)
+            magic_header == self.magic and
+            fileatt_raw < 32768 and
+            shwcmd in {0x01, 0x03, 0x07} and  # might be a bit too strict
+            (hks == (0, 0) or (0x30 <= hks[0] <= 0x91 and hks[1] in {1, 2, 4})) and
+            reserve1 == 0 and
+            reserve2 == 0 and
+            reserve3 == 0
+        )
             #(hotkey == "\x00\00" or (0x30 <= ord(hotkey[0]) <= 0x91 and \
             #    hotkey[1] in {"\x01", "\x02", "\x04"}))
         self._CountValidBytes(76)
+        print "ValidBytes(LinkHeader): %d" % self.bytes_last_valid
         if flags["HasLinkTargetIDList"]:
             self._IDList()
         if flags["HasLinkInfo"]:
@@ -238,5 +250,5 @@ class LNKValidator(Validator):
             flags["HasIconLocation"],
         ]
         if any(string_flags):
-            self._Strings(string_flags)
+            self._Strings(string_flags, flags["IsUnicode"])
         return self.is_valid  # still working on the proper algorithm
