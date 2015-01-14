@@ -69,7 +69,7 @@ class LNKValidator(Validator):
         valid_delta = 2
         itemid_size, = struct.unpack("<H", self._Read(2))
         while itemid_size > 0:
-            valid_delta += itemid_size + 2 # it may be counting an extra 2 bytes
+            valid_delta += itemid_size
             item = self._Read(itemid_size - 2)
             self.details["item_list"].append(item)
             itemid_size, = struct.unpack("<H", self._Read(2))
