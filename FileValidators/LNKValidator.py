@@ -61,6 +61,26 @@ class LNKValidator(Validator):
             "item_list": [],
         }
 
+    def _ExtraData(self):
+        """
+        Internal method! Called from Validate to test if there's an ExtraData structure present. It
+        reads it and extracts data from it.
+        """
+        tmp = []
+        edl = 0
+        size_raw = self._Read(4)
+        if len(size_raw) == 4:
+            edl = 4
+            block_size, = struct.unpack("<L", size_raw)
+            while block_size > 0:
+                extra_data = size_raw + self._Read(block_size - 4)
+                tmp.append(extra_data)
+                edl += len(extra_data)
+                size_raw = self._Read(4)
+                block_size, = struct.unpack("<L", size_raw)
+        self.details["ExtraData"] = tmp
+        self.details["ExtraDataLength"] = edl
+
     def _IDList(self):
         """
         Internal method! Called from Validate when a IDList structure is present. It reads it and
@@ -251,4 +271,5 @@ class LNKValidator(Validator):
         ]
         if any(string_flags):
             self._Strings(string_flags, flags["IsUnicode"])
+        self._ExtraData()
         return self.is_valid  # still working on the proper algorithm
