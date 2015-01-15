@@ -166,11 +166,10 @@ class LNKValidator(Validator):
             rawcnrl = linkinfo[vid_offset:]
             size, cnrl_flagsr, nn_offset, dn_offset, nptype = struct.unpack("<LLLLL", rawcnrl[0:20])
             rawcnrl = rawcnrl[:size]  # unnecessary
-            cnrl_unicode = nn_offset > 0x14
+            cnrl_unicode = nn_offset > 0x14 and size > 0x1C
             nn_offset_u, dn_offset_u = -1, -1
             if cnrl_unicode:
                 # we have optional fields in the CNRL header
-                print nn_offset, len(rawcnrl)
                 nn_offset_u, dn_offset_u = struct.unpack("<LL", rawcnrl[20:28])
             cnrl_flags = {
                 "ValidDevice": bool(cnrl_flagsr & 0x00000001),
@@ -182,28 +181,27 @@ class LNKValidator(Validator):
             if cnrl_flags["ValidDevice"]:
                 devicename = rawcnrl[dn_offset:]
                 devicename = devicename[:devicename.find("\x00")]
-            netnameu = u""
-            devicenameu = u""
-            if cnrl_unicode:
-                netnameu = rawcnrl[nn_offset:]
-                netnameu = netnameu.decode("utf-16")
-                netnameu = netnameu[:netnameu.find("\x00")]
-                devicenameu = rawcnrl[dn_offset:]
-                devicenameu = devicenameu.decode("utf-16")
-                devicenameu = devicenameu[:devicenameu.find("\x00")]
             cnrl = {
                 "CommonNetworkRelativeLinkSize": size,
                 "CommonNetworkRelativeLinkFlags": cnrl_flags,
                 "NetNameOffset": nn_offset,
                 "DeviceNameOffset": dn_offset,
                 "NetworkProviderType": nptype,  # maybe translate to a vendor name?
-                "NetNameOffsetUnicode": nn_offset_u,
-                "DeviceOffsetUnicode": dn_offset_u,
                 "NetName": netname,
                 "DeviceName": devicename,
-                "NetNameUnicode": netnameu,
-                "DeviceNameUnicode": devicenameu,
+                "DEBUG_RAW": rawcnrl,
             }
+            if cnrl_unicode:
+                netnameu = rawcnrl[nn_offset_u:]
+                netnameu = netnameu.decode("utf-16")
+                netnameu = netnameu[:netnameu.find("\x00")]
+                devicenameu = rawcnrl[dn_offset_u:]
+                devicenameu = devicenameu.decode("utf-16")
+                devicenameu = devicenameu[:devicenameu.find("\x00")]
+                cnrl["NetNameOffsetUnicode"] = nn_offset_u
+                cnrl["NetNameUnicode"] = netnameu
+                cnrl["DeviceNameUnicode"] = devicenameu
+                cnrl["DeviceOffsetUnicode"] = dn_offset_u
             tmp["CommonNetworkRelativeLink"] = cnrl
         # have to add some checks for the whole structure
         self.is_valid = (
