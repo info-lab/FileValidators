@@ -93,21 +93,78 @@ class LNKValidator(Validator):
             item = self._Read(itemid_size - 2)
             self.details["item_list"].append(item)
             itemid_size, = struct.unpack("<H", self._Read(2))
-        print "ValidDelta(IDList): %d" % valid_delta
         self._CountValidBytes(valid_delta)
 
     def _LinkInfo(self):
         """
         Internal method! Called from Validate when a LinkInfo structure is present. It reads it and
         extracts data from it.
+
+        LinkInfo is a very complex structure, this method might need to be split into sub-methods.
         """
+        tmp = {}
         sizes_raw = self._Read(8)
-        lnkinfo_size, lnkinfo_header_size = struct.unpack("<LL", sizes_raw)
-        self.details["linkinfo"] = sizes_raw + self._Read(lnkinfo_size - 8)
-        self.details["linkinfo_header"] = self.details["linkinfo"][:lnkinfo_header_size]
+        linkinfo_size, linkinfo_header_size = struct.unpack("<LL", sizes_raw)
+        linkinfo = sizes_raw + self._Read(linkinfo_size - 8)
+        #self.details["linkinfo"] = linkinfo
+        linkinfo_header = linkinfo[:linkinfo_header_size]
+        #self.details["linkinfo_header"] = linkinfo_header
         # add checks for the LinkInfoHeader
-        print "ValidDelta(LinkInfo): %d" % lnkinfo_size
-        self._CountValidBytes(lnkinfo_size)
+        lbpath_offsetu, cps_offsetu = -1, -1
+        flagsr, vid_offset, lbpath_offset, cnrl_offset = struct.unpack("<LLLL", linkinfo[8:24])
+        cps_offset = struct.unpack("<L", linkinfo[24:28])
+        if linkinfo_header_size > 0x24:
+            lbpath_offsetu, cps_offsetu = struct.unpack("<LL", linkinfo[28:36])
+        flags = {
+            "VolumeID": bool(flagsr & 0x00000001),
+            "CommonNetwork": bool(flagsr & 0x00000002),
+        }
+        if flags["VolumeID"]:
+            # we have to parse the VolumeID Structure
+            rawvid = linkinfo[vid_offset:]
+            vid_size, dtype, dserial, label_offset = struct.unpack("<LLLL", rawvid[0:16])
+            volumeid = {
+                "VolumeIDSize": vid_size,
+                "DriveType": dtype,
+                "DriveSerialNumber": dserial,
+                "VolumeLabelOffset": label_offset,
+            }
+            rawvid = rawvid[:vid_size]  # no entirely necessary
+            is_unicode = False
+            if label_offset == 0x00000014:
+                is_unicode = True
+                label_offset = struct.unpack("<L", rawvid[16:20])
+                volumeid["VolumeLabelOffsetUnicode"] = label_offset
+            data = rawvid[label_offset:]
+            if is_unicode:
+                data = data.decode("utf-16")
+            data = data[:-1]  # the strings are NULL terminated, always
+            volumeid["Data"] = data
+            # that's all for the VolumeID Structure, now to the LocalBasePath
+            lb_unicode = False
+            if lbpath_offsetu > -1:
+                lb_offset = lbpath_offsetu
+                lb_unicode = True
+            else:
+                lb_offset = lbpath_offset
+            localbasepath = linkinfo[lb_offset:]
+            if lb_unicode:
+                localbasepath.decode("utf-16")
+            localbasepath = localbasepath[:localbasepath.find("\x00")]
+            # done parsing, now we add to the dictionary
+            tmp["VolumeID"] = volumeid
+            tmp["LocalBasePath"] = localbasepath
+        if flags["CommonNetwork"]:
+            # we have to parse the Common Network Relative Link Structure
+            pass
+        # have to add some checks for the whole structure
+        self.is_valid = (
+            self.is_valid and
+            flagsr < 4 and  # only active bits are b0 and b1, the rest should always be 0.
+            True  # dummy value, will get removed later
+        )
+        self.details["LinkInfo"] = tmp
+        self._CountValidBytes(linkinfo_size)
 
     def _Strings(self, string_flags, is_unicode):
         """
@@ -123,8 +180,8 @@ class LNKValidator(Validator):
             "WorkingDir",
             "Arguments",
             "IconLocation",
-        ]
-        ret = {}
+        ]  # this might be moved to an attribute
+        tmp = {}
         valid_delta = 0
         size_mult = 1
         if is_unicode:
@@ -137,11 +194,10 @@ class LNKValidator(Validator):
                 if is_unicode:
                     string = string.decode("utf16")
                 name = string_names[index]
-                ret[name] = string
+                tmp[name] = string
                 valid_delta += 2 + size
         self._CountValidBytes(valid_delta)
-        print "ValidDelta(Strings): %d" % valid_delta
-        self.details["Strings"] = ret
+        self.details["Strings"] = tmp
 
     def _MSTimestamp(self, timestamp):
         """
@@ -176,12 +232,16 @@ class LNKValidator(Validator):
             self.data = fd
         else:
             raise Exception("Argument must be either a file or a string.")
+        # this first section has to change, for all validators
         self.pos = 0
         self.is_valid = True
         self.eof = False
         self.end = False
         self._SetValidBytes(0)
         self._CleanDetails()
+        # and this top section could go to Validator, perhaps?
+        # now we start with the header validation, this could go to a separate method, but it then
+        # calling of
         shlheader = self._Read(76)
         magic_header = shlheader[0:20]
         flags_raw, fileatt_raw = struct.unpack("<LL", shlheader[20:28])
@@ -257,7 +317,6 @@ class LNKValidator(Validator):
             #(hotkey == "\x00\00" or (0x30 <= ord(hotkey[0]) <= 0x91 and \
             #    hotkey[1] in {"\x01", "\x02", "\x04"}))
         self._CountValidBytes(76)
-        print "ValidBytes(LinkHeader): %d" % self.bytes_last_valid
         if flags["HasLinkTargetIDList"]:
             self._IDList()
         if flags["HasLinkInfo"]:
