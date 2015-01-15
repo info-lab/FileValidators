@@ -23,6 +23,9 @@ from Validator import Validator
 class LNKValidator(Validator):
     """
     Class that validates an object to determine if it is a valid MS-SHLLINK (LNK) file.
+
+    Still in development, this Validator also focuses in extracting information from LNK Files, as
+    such it can be used as a parser.
     """
 
     def __init__(self):
@@ -151,12 +154,57 @@ class LNKValidator(Validator):
             if lb_unicode:
                 localbasepath.decode("utf-16")
             localbasepath = localbasepath[:localbasepath.find("\x00")]
-            # done parsing, now we add to the dictionary
+            # done parsing, now some checks
+            # only valid drive types defined
+            self.is_valid = self.is_valid and dtype in {0, 1, 2, 3, 4, 5, 6}
+            # should add checks for the offsets
+            # and now we add to the dictionary
             tmp["VolumeID"] = volumeid
             tmp["LocalBasePath"] = localbasepath
         if flags["CommonNetwork"]:
             # we have to parse the Common Network Relative Link Structure
-            pass
+            rawcnrl = linkinfo[vid_offset:]
+            size, cnrl_flagsr, nn_offset, dn_offset, nptype = struct.unpack("<LLLLL", rawcnrl[0:20])
+            rawcnrl = rawcnrl[:size]  # unnecessary
+            cnrl_unicode = nn_offset > 0x14
+            nn_offset_u, dn_offset_u = -1, -1
+            if cnrl_unicode:
+                # we have optional fields in the CNRL header
+                print nn_offset, len(rawcnrl)
+                nn_offset_u, dn_offset_u = struct.unpack("<LL", rawcnrl[20:28])
+            cnrl_flags = {
+                "ValidDevice": bool(cnrl_flagsr & 0x00000001),
+                "ValidNetType": bool(cnrl_flagsr & 0x00000002),
+            }
+            netname = rawcnrl[nn_offset:]
+            netname = netname[:netname.find("\x00")]
+            devicename = ""
+            if cnrl_flags["ValidDevice"]:
+                devicename = rawcnrl[dn_offset:]
+                devicename = devicename[:devicename.find("\x00")]
+            netnameu = u""
+            devicenameu = u""
+            if cnrl_unicode:
+                netnameu = rawcnrl[nn_offset:]
+                netnameu = netnameu.decode("utf-16")
+                netnameu = netnameu[:netnameu.find("\x00")]
+                devicenameu = rawcnrl[dn_offset:]
+                devicenameu = devicenameu.decode("utf-16")
+                devicenameu = devicenameu[:devicenameu.find("\x00")]
+            cnrl = {
+                "CommonNetworkRelativeLinkSize": size,
+                "CommonNetworkRelativeLinkFlags": cnrl_flags,
+                "NetNameOffset": nn_offset,
+                "DeviceNameOffset": dn_offset,
+                "NetworkProviderType": nptype,  # maybe translate to a vendor name?
+                "NetNameOffsetUnicode": nn_offset_u,
+                "DeviceOffsetUnicode": dn_offset_u,
+                "NetName": netname,
+                "DeviceName": devicename,
+                "NetNameUnicode": netnameu,
+                "DeviceNameUnicode": devicenameu,
+            }
+            tmp["CommonNetworkRelativeLink"] = cnrl
         # have to add some checks for the whole structure
         self.is_valid = (
             self.is_valid and
