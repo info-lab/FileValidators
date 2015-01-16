@@ -151,7 +151,7 @@ class LNKValidator(Validator):
         return {
             "BlockType": "ConsoleFEDataBlock",
             "BlockSize": bsize,
-            "BlockSignature", bsign,
+            "BlockSignature": bsign,
             "CodePage": codepage,
         }
 
