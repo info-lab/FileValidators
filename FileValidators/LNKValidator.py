@@ -61,7 +61,7 @@ class LNKValidator(Validator):
 
     def _CleanDetails(self):
         self.details = {
-            "item_list": [],
+            "extensions": [".lnk"],
         }
 
     def _ExtraData(self):
