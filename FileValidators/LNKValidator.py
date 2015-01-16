@@ -69,6 +69,19 @@ class LNKValidator(Validator):
         Internal method! Called from Validate to test if there's an ExtraData structure present. It
         reads it and extracts data from it.
         """
+        block_methods = {
+            "\x02\x00\x00\xa0": self._ExtraConsole,
+            "\x04\x00\x00\xa0": self._ExtraConsoleFe,
+            "\x06\x00\x00\xa0": self._ExtraDarwin,
+            "\x01\x00\x00\xa0": self._ExtraEnvironment,
+            "\x07\x00\x00\xa0": self._ExtraIcon,
+            "\x0b\x00\x00\xa0": self._ExtraKnownFolder,
+            "\x09\x00\x00\xa0": self._ExtraProperty,
+            "\x08\x00\x00\xa0": self._ExtraShim,
+            "\x05\x00\x00\xa0": self._ExtraSpecialFolder,
+            "\x03\x00\x00\xa0": self._ExtraTracker,
+            "\x0c\x00\x00\xa0": self._ExtraVista,
+        }  # "jump-dictionary", probably the sanest way to parse the ExtraData block.
         tmp = []
         edl = 0
         size_raw = self._Read(4)
@@ -77,12 +90,52 @@ class LNKValidator(Validator):
             block_size, = struct.unpack("<L", size_raw)
             while block_size > 0:
                 extra_data = size_raw + self._Read(block_size - 4)
+                block_sign = extra_data[4:8]
+                op = block_methods[block_sign]
+                extra_data = op(extra_data)
                 tmp.append(extra_data)
                 edl += len(extra_data)
                 size_raw = self._Read(4)
                 block_size, = struct.unpack("<L", size_raw)
+        # The problem with ExtraData is that it is a list of ExtraDataBlocks at the end of the file,
+        # which is entirely optional and can be cut off from it. It has its own structure, so we
+        # parse it and store it apart from the MS-SHLLINK structure.
+        # Final length of the file is the valid bytes + extra data length.
         self.details["ExtraData"] = tmp
         self.details["ExtraDataLength"] = edl
+
+    def _ExtraConsole(self, block):
+        return {"DEBUG_RAW": block}
+
+    def _ExtraConsoleFe(self, block):
+        return {"DEBUG_RAW": block}
+
+    def _ExtraDarwin(self, block):
+        return {"DEBUG_RAW": block}
+
+    def _ExtraEnvironment(self, block):
+        return {"DEBUG_RAW": block}
+
+    def _ExtraIcon(self, block):
+        return {"DEBUG_RAW": block}
+
+    def _ExtraKnownFolder(self, block):
+        return {"DEBUG_RAW": block}
+
+    def _ExtraProperty(self, block):
+        return {"DEBUG_RAW": block}
+
+    def _ExtraShim(self, block):
+        return {"DEBUG_RAW": block}
+
+    def _ExtraSpecialFolder(self, block):
+        return {"DEBUG_RAW": block}
+
+    def _ExtraTracker(self, block):
+        return {"DEBUG_RAW": block}
+
+    def _ExtraVista(self, block):
+        return {"DEBUG_RAW": block}
 
     def _IDList(self):
         """
@@ -109,9 +162,7 @@ class LNKValidator(Validator):
         sizes_raw = self._Read(8)
         linkinfo_size, linkinfo_header_size = struct.unpack("<LL", sizes_raw)
         linkinfo = sizes_raw + self._Read(linkinfo_size - 8)
-        #self.details["linkinfo"] = linkinfo
         linkinfo_header = linkinfo[:linkinfo_header_size]
-        #self.details["linkinfo_header"] = linkinfo_header
         # add checks for the LinkInfoHeader
         lbpath_offsetu, cps_offsetu = -1, -1
         flagsr, vid_offset, lbpath_offset, cnrl_offset = struct.unpack("<LLLL", linkinfo[8:24])
@@ -189,7 +240,7 @@ class LNKValidator(Validator):
                 "NetworkProviderType": nptype,  # maybe translate to a vendor name?
                 "NetName": netname,
                 "DeviceName": devicename,
-                "DEBUG_RAW": rawcnrl,
+                #"DEBUG_RAW": rawcnrl,
             }
             if cnrl_unicode:
                 netnameu = rawcnrl[nn_offset_u:]
