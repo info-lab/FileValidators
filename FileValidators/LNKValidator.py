@@ -116,6 +116,7 @@ class LNKValidator(Validator):
         coltable = [coltable[x * 4:x * 4 + 4] for x in xrange(16)]
         coltable = [struct.unpack("<BBBB", c) for c in coltable]
         ret.update({
+            "BlockType": "ConsoleDataBlock",
             "BlockSize": bsize,
             "BlockSignature": bsign,
             "FillAttributes": fillat,
@@ -145,10 +146,30 @@ class LNKValidator(Validator):
         return ret
 
     def _ExtraConsoleFe(self, block):
-        return {"DEBUG_RAW": block}
+        bsize, bsign, codepage = struct.unpack("<LLL", block[0:12])
+        # slice used in case a bad block gets parsed by this method.
+        return {
+            "BlockType": "ConsoleFEDataBlock",
+            "BlockSize": bsize,
+            "BlockSignature", bsign,
+            "CodePage": codepage,
+        }
 
     def _ExtraDarwin(self, block):
-        return {"DEBUG_RAW": block}
+        bsize, bsign = struct.unpack("<LL", block[0:8])
+        data_ansi = block[8:268]
+        data_ansi = data_ansi[data_ansi.find("\x00")]
+        data_unicode = block[268:788]
+        data_unicode = data_unicode.decode("utf-16")
+        data_unicode = data_unicode[data_unicode.find("\x00")]
+        return {
+            "BlockType": "DarwinDataBlock",
+            "BlockSize": bsize,
+            "BlockSignature": bsign,
+            "DarwinDataAnsi": data_ansi,
+            "DarwinDataUnicode": data_unicode,
+            #"DEBUG_RAW": block
+        }
 
     def _ExtraEnvironment(self, block):
         return {"DEBUG_RAW": block}
