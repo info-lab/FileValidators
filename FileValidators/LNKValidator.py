@@ -92,9 +92,9 @@ class LNKValidator(Validator):
                 extra_data = size_raw + self._Read(block_size - 4)
                 block_sign = extra_data[4:8]
                 op = block_methods[block_sign]
+                edl += len(extra_data)
                 extra_data = op(extra_data)
                 tmp.append(extra_data)
-                edl += len(extra_data)
                 size_raw = self._Read(4)
                 block_size, = struct.unpack("<L", size_raw)
         # The problem with ExtraData is that it is a list of ExtraDataBlocks at the end of the file,
