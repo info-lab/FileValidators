@@ -172,10 +172,36 @@ class LNKValidator(Validator):
         }
 
     def _ExtraEnvironment(self, block):
-        return {"DEBUG_RAW": block}
+        bsize, bsign = struct.unpack("<LL", block[0:8])
+        data_ansi = block[8:268]
+        data_ansi = data_ansi[data_ansi.find("\x00")]
+        data_unicode = block[268:788]
+        data_unicode = data_unicode.decode("utf-16")
+        data_unicode = data_unicode[data_unicode.find("\x00")]
+        return {
+            "BlockType": "EnvironmentVariableDataBlock",
+            "BlockSize": bsize,
+            "BlockSignature": bsign,
+            "TargetAnsi": data_ansi,
+            "TargetUnicode": data_unicode,
+            #"DEBUG_RAW": block
+        }
 
     def _ExtraIcon(self, block):
-        return {"DEBUG_RAW": block}
+        bsize, bsign = struct.unpack("<LL", block[0:8])
+        data_ansi = block[8:268]
+        data_ansi = data_ansi[data_ansi.find("\x00")]
+        data_unicode = block[268:788]
+        data_unicode = data_unicode.decode("utf-16")
+        data_unicode = data_unicode[data_unicode.find("\x00")]
+        return {
+            "BlockType": "IconEnvironmentDataBlock",
+            "BlockSize": bsize,
+            "BlockSignature": bsign,
+            "TargetAnsi": data_ansi,
+            "TargetUnicode": data_unicode,
+            #"DEBUG_RAW": block
+        }
 
     def _ExtraKnownFolder(self, block):
         return {"DEBUG_RAW": block}
