@@ -1,3 +1,14 @@
+Version 0.6.2:
+-------------
+* LNKValidator implemented, but still needs work:
+    * Validation checks are only performed on the standard binary part, not the ExtraData Segment.
+    * There are a lot more places to validate values, so far it validates the big structure of the
+    file. It mainly works as a parser.
+    * We are looking for test files to improve the validator. Please contact us if you can share!
+* Starting code cleanup for 0.7.
+* Added Validator to __init__.py so "from FileValidators import Validators" can be done. This helps
+with the xp validators testing, and also makes for easier extension of the framework.
+
 Version 0.6.1:
 --------------
 * Merged Pull request #1.
@@ -36,7 +47,7 @@ Version 0.5.6:
     * 10% faster for small files read from disk
     * 33% faster for normal to big files read from disk
     * 66% faster when validating a string -- this also means that the carver won't have to create a
-    StringIO object, which will aso save time for the carver.
+    StringIO object, which will also save time for the carver.
 * The new architecture will be tested as the validators are ported to it. The interface will not
 change, but now accepts strings.
 * As of now, it works on whole files loaded to memory. Further improvements should allow to validate

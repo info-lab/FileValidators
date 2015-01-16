@@ -8,4 +8,4 @@ from ZIPValidator import ZIPValidator
 from LNKValidator import LNKValidator
 from Validator import Validator
 
-__VER__ = "0.6.1"
+__VER__ = "0.6.2"

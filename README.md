@@ -22,6 +22,8 @@ Currently, validators have been implemented for the following formats:
 * **JPG**
 * **PNG** -- thanks to CRC checks, this validator will always give accurate results
 * **GIF**
+* **Shell Link (.LNK)** file format -- this validator provides a lot of information and can also be
+used as a parser for .lnk files.
 * **MS-OLE** file format (Office 97-2003, thumbs.db, etc)
 * **SQLite3** -- partially finished, can parse valid DB's
 * **ZIP** file format as only a True/False validator -- it can only tell valid files, but not give any

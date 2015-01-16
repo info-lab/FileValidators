@@ -36,9 +36,7 @@ class LNKValidator(Validator):
         super(LNKValidator, self).__init__()
         self.data = ""
         self.pos = 0
-        self.details = {
-            "item_list": [],
-        }
+        self.details = {}
         self.magic = "L\x00\x00\x00\x01\x14\x02\x00\x00\x00\x00\x00\xc0\x00\x00\x00\x00\x00\x00F"
 
     def _ConvertBytes(self, value):
@@ -158,10 +156,10 @@ class LNKValidator(Validator):
     def _ExtraDarwin(self, block):
         bsize, bsign = struct.unpack("<LL", block[0:8])
         data_ansi = block[8:268]
-        data_ansi = data_ansi[data_ansi.find("\x00")]
+        data_ansi = data_ansi[: data_ansi.find("\x00")]
         data_unicode = block[268:788]
         data_unicode = data_unicode.decode("utf-16")
-        data_unicode = data_unicode[data_unicode.find("\x00")]
+        data_unicode = data_unicode[: data_unicode.find("\x00")]
         return {
             "BlockType": "DarwinDataBlock",
             "BlockSize": bsize,
@@ -174,10 +172,10 @@ class LNKValidator(Validator):
     def _ExtraEnvironment(self, block):
         bsize, bsign = struct.unpack("<LL", block[0:8])
         data_ansi = block[8:268]
-        data_ansi = data_ansi[data_ansi.find("\x00")]
+        data_ansi = data_ansi[: data_ansi.find("\x00")]
         data_unicode = block[268:788]
         data_unicode = data_unicode.decode("utf-16")
-        data_unicode = data_unicode[data_unicode.find("\x00")]
+        data_unicode = data_unicode[: data_unicode.find("\x00")]
         return {
             "BlockType": "EnvironmentVariableDataBlock",
             "BlockSize": bsize,
@@ -190,10 +188,10 @@ class LNKValidator(Validator):
     def _ExtraIcon(self, block):
         bsize, bsign = struct.unpack("<LL", block[0:8])
         data_ansi = block[8:268]
-        data_ansi = data_ansi[data_ansi.find("\x00")]
+        data_ansi = data_ansi[: data_ansi.find("\x00")]
         data_unicode = block[268:788]
         data_unicode = data_unicode.decode("utf-16")
-        data_unicode = data_unicode[data_unicode.find("\x00")]
+        data_unicode = data_unicode[: data_unicode.find("\x00")]
         return {
             "BlockType": "IconEnvironmentDataBlock",
             "BlockSize": bsize,
