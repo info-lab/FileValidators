@@ -166,14 +166,22 @@ class LNKValidator(Validator):
         # add checks for the LinkInfoHeader
         lbpath_offsetu, cps_offsetu = -1, -1
         flagsr, vid_offset, lbpath_offset, cnrl_offset = struct.unpack("<LLLL", linkinfo[8:24])
-        cps_offset = struct.unpack("<L", linkinfo[24:28])
+        cps_offset, = struct.unpack("<L", linkinfo[24:28])
         if linkinfo_header_size > 0x24:
             lbpath_offsetu, cps_offsetu = struct.unpack("<LL", linkinfo[28:36])
         flags = {
             "VolumeID": bool(flagsr & 0x00000001),
             "CommonNetwork": bool(flagsr & 0x00000002),
         }
-        if flags["VolumeID"]:
+        commonpath = linkinfo[cps_offset:]
+        commonpath = commonpath[:commonpath.find("\x00")]
+        tmp["CommonPathSuffix"] = commonpath
+        if cps_offsetu > 0:
+            commonpath_unicode = linkinfo[cps_offsetu]
+            commonpath_unicode = commonpath_unicode.decode("utf-16")
+            commonpath_unicode = commonpath_unicode[:commonpath_unicode.find("\x00")]
+            tmp["CommonPathSuffixUnicode"] = commonpath_unicode
+        if flags["VolumeID"]:  # and Local Base Path
             # we have to parse the VolumeID Structure
             rawvid = linkinfo[vid_offset:]
             vid_size, dtype, dserial, label_offset = struct.unpack("<LLLL", rawvid[0:16])
