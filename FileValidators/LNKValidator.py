@@ -105,7 +105,44 @@ class LNKValidator(Validator):
         self.details["ExtraDataLength"] = edl
 
     def _ExtraConsole(self, block):
-        return {"DEBUG_RAW": block}
+        ret = {}  # {"DEBUG_RAW": block}
+        bsize, bsign, fileatt, popatt, scrnbuffx, scrnbuffy = struct.unpack("<LLHHHH", block[0:16])
+        winsizx, winsizy, winorigx, winorigy, u1, u2 = struct.unpack("<HHHHLL", block[16:32])
+        fontsiz, fontfam, fontwgt, facename, cursiz = struct.unpack("<LLL64sL", block[32:112])
+        fullscrn, quicked, insertm, autopos, histbuff = struct.unpack("<LLLLL", block[112:132])
+        numhists, histnodup, coltable = struct.unpack("<LL64s", block[132:204])
+        facename = facename.decode("utf-16")
+        facename = facename[:facename.find("\x00")]
+        coltable = [coltable[x * 4:x * 4 + 4] for x in xrange(16)]
+        coltable = [struct.unpack("<BBBB", c) for c in coltable]
+        ret.update({
+            "BlockSize": bsize,
+            "BlockSignature": bsign,
+            "FileAttributes": fileatt,
+            "PopupFillAttributes": popatt,
+            "ScreenBufferSizeX": scrnbuffx,
+            "ScreenBufferSizeY": scrnbuffy,
+            "WindowsSizeX": winsizx,
+            "WindowsSizeY": winsizy,
+            "WindowsOriginX": winorigx,
+            "WindowsOriginY": winorigy,
+            "Unused1": u1,
+            "Unused2": u2,
+            "FontSize": fontsiz,
+            "FontFamily": fontfam,
+            "FontWeight": fontwgt,
+            "FaceName": facename,
+            "CursorSize": cursiz,
+            "FullScreen": fullscrn,
+            "QuickEdit": quicked,
+            "InsertMode": insertm,
+            "AutoPosition": autopos,
+            "HistoryBufferSize": histbuff,
+            "NumberOfHistoriyBuffers": numhists,
+            "HistoryNoDup": histnodup,
+            "ColorTable": coltable,
+        })
+        return ret
 
     def _ExtraConsoleFe(self, block):
         return {"DEBUG_RAW": block}
