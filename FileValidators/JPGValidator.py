@@ -72,7 +72,7 @@ class JPGValidator(Validator):
 
     def GetDetails(self):
         """
-        Returns dictionary with import information from the recently-validated file.
+        Returns dictionary with important information from the recently-validated file.
 
         :return: dictionary {
             'segments': list of tuples of markers read from the file with the following structure:

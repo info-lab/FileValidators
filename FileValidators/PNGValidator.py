@@ -78,7 +78,7 @@ class PNGValidator(Validator):
 
     def GetDetails(self):
         """
-        Returns dictionary with import information from the recently-validated file.
+        Returns dictionary with important information from the recently-validated file.
 
         :return: dictionary {
             'segments': a list of tuples of the following format:

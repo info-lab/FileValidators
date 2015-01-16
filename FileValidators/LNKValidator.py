@@ -53,7 +53,7 @@ class LNKValidator(Validator):
 
     def GetDetails(self):
         """
-        Returns dictionary with import information from the recently-validated file.
+        Returns dictionary with important information from the recently-validated file.
 
         :return: dictionary {}
         """
@@ -106,7 +106,7 @@ class LNKValidator(Validator):
 
     def _ExtraConsole(self, block):
         ret = {}  # {"DEBUG_RAW": block}
-        bsize, bsign, fileatt, popatt, scrnbuffx, scrnbuffy = struct.unpack("<LLHHHH", block[0:16])
+        bsize, bsign, fillat, popatt, scrnbuffx, scrnbuffy = struct.unpack("<LLHHHH", block[0:16])
         winsizx, winsizy, winorigx, winorigy, u1, u2 = struct.unpack("<HHHHLL", block[16:32])
         fontsiz, fontfam, fontwgt, facename, cursiz = struct.unpack("<LLL64sL", block[32:112])
         fullscrn, quicked, insertm, autopos, histbuff = struct.unpack("<LLLLL", block[112:132])
@@ -118,7 +118,7 @@ class LNKValidator(Validator):
         ret.update({
             "BlockSize": bsize,
             "BlockSignature": bsign,
-            "FileAttributes": fileatt,
+            "FillAttributes": fillat,
             "PopupFillAttributes": popatt,
             "ScreenBufferSizeX": scrnbuffx,
             "ScreenBufferSizeY": scrnbuffy,
