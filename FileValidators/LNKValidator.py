@@ -226,16 +226,63 @@ class LNKValidator(Validator):
         }
 
     def _ExtraShim(self, block):
-        return {"DEBUG_RAW": block}
+        bsize, bsign = struct.unpack("<LL", block)
+        layername = block[8:]
+        if len(layername) % 2 != 0:
+            layername = layername[:-1]  # bad? fix to avoid exceptions in case of bad data
+        layername = layername.decode("utf-16")  # there's no info that tells if its NULL-terminated
+        return {
+            "BlockType": "ShimDataBlock",
+            "BlockSize": bsize,
+            "BlockSignature": bsign,
+            "LayerName": layername,
+            #"DEBUG_RAW": block
+        }
 
     def _ExtraSpecialFolder(self, block):
-        return {"DEBUG_RAW": block}
+        bsize, bsign, folderid, offset = struct.unpack("<LLLL", block[0:36])
+        return {
+            "BlockType": "KnownFolderDataBlock",
+            "BlockSize": bsize,
+            "BlockSignature": bsign,
+            "SpecialFolderID": folderid,  # should parse folderid...
+            "Offset": offset,
+            #"DEBUG_RAW": block
+        }
 
     def _ExtraTracker(self, block):
-        return {"DEBUG_RAW": block}
+        # Docs are very unclear of this block -- one part says its always 0x60 bytes long (which
+        # means teh MachineID field is 16 bytes long and zero-padded) but there's also a Length
+        # field, which must be equal or greater than 0x58.
+        # We will take the first semantic, and assume MachineID is fixed 16 bytes long, zero-filled.
+        bsize, bsign, length, version = struct.unpack("<LLLL", block[0:16])
+        machine_id = block[16:32]
+        if "\x00" in machine_id:
+            machine_id = machine_id[: machine_id.find("\x00")]
+        droid = block[32:64]
+        droid_birth = block[64:96]
+        return {
+            "BlockType": "TrackerDataBlock",
+            "BlockSize": bsize,
+            "BlockSignature": bsign,
+            "Length": length,
+            "Version": version,
+            "MachineID": machine_id,
+            "Droid": droid,
+            "DroidBirth": droid_birth,
+            #"DEBUG_RAW": block
+        }
 
     def _ExtraVista(self, block):
-        return {"DEBUG_RAW": block}
+        bsize, bsign = struct.unpack("<LL", block[0:8])
+        idlist = block[8:]
+        return {
+            "BlockType": "VistaAndAboveIDListDataBlock",
+            "BlockSize": bsize,
+            "BlockSignature": bsign,
+            "IDList": idlist,  # should parse idlist
+            #"DEBUG_RAW": block
+        }
 
     def _IDList(self):
         """
@@ -243,12 +290,14 @@ class LNKValidator(Validator):
         extracts data from it.
         """
         valid_delta = 2
+        tmp = []
         itemid_size, = struct.unpack("<H", self._Read(2))
         while itemid_size > 0:
             valid_delta += itemid_size
             item = self._Read(itemid_size - 2)
-            self.details["item_list"].append(item)
+            tmp.append(item)
             itemid_size, = struct.unpack("<H", self._Read(2))
+        self.details["IDList"] = tmp
         self._CountValidBytes(valid_delta)
 
     def _LinkInfo(self):
