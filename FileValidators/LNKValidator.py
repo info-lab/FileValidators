@@ -105,7 +105,6 @@ class LNKValidator(Validator):
         self.details["ExtraDataLength"] = edl
 
     def _ExtraConsole(self, block):
-        ret = {}  # {"DEBUG_RAW": block}
         bsize, bsign, fillat, popatt, scrnbuffx, scrnbuffy = struct.unpack("<LLHHHH", block[0:16])
         winsizx, winsizy, winorigx, winorigy, u1, u2 = struct.unpack("<HHHHLL", block[16:32])
         fontsiz, fontfam, fontwgt, facename, cursiz = struct.unpack("<LLL64sL", block[32:112])
@@ -115,7 +114,7 @@ class LNKValidator(Validator):
         facename = facename[:facename.find("\x00")]
         coltable = [coltable[x * 4:x * 4 + 4] for x in xrange(16)]
         coltable = [struct.unpack("<BBBB", c) for c in coltable]
-        ret.update({
+        return {
             "BlockType": "ConsoleDataBlock",
             "BlockSize": bsize,
             "BlockSignature": bsign,
@@ -142,8 +141,8 @@ class LNKValidator(Validator):
             "NumberOfHistoriyBuffers": numhists,
             "HistoryNoDup": histnodup,
             "ColorTable": coltable,
-        })
-        return ret
+            #"DEBUG_RAW": block
+        }
 
     def _ExtraConsoleFe(self, block):
         bsize, bsign, codepage = struct.unpack("<LLL", block[0:12])
@@ -153,6 +152,7 @@ class LNKValidator(Validator):
             "BlockSize": bsize,
             "BlockSignature": bsign,
             "CodePage": codepage,
+            #"DEBUG_RAW": block
         }
 
     def _ExtraDarwin(self, block):
@@ -204,10 +204,26 @@ class LNKValidator(Validator):
         }
 
     def _ExtraKnownFolder(self, block):
-        return {"DEBUG_RAW": block}
+        bsize, bsign, folderid, offset = struct.unpack("<LL16sL", block[0:36])
+        return {
+            "BlockType": "KnownFolderDataBlock",
+            "BlockSize": bsize,
+            "BlockSignature": bsign,
+            "KnownFolderID": folderid,  # should parse folderid...
+            "Offset": offset,
+            #"DEBUG_RAW": block
+        }
 
     def _ExtraProperty(self, block):
-        return {"DEBUG_RAW": block}
+        bsize, bsign = struct.unpack("<LL", block[0:8])
+        prop_store = block[8:]  # should parse this structure...
+        return {
+            "BlockType": "PropertyStoreDataBlock",
+            "BlockSize": bsize,
+            "BlockSignature": bsign,
+            "PropertyStore": prop_store,
+            #"DEBUG_RAW": block
+        }
 
     def _ExtraShim(self, block):
         return {"DEBUG_RAW": block}
