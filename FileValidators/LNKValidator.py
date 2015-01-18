@@ -20,6 +20,40 @@ import struct
 from Validator import Validator
 
 
+class GUID(object):
+    """
+    This class manages GUID to represent them from raw data into bracket representation. Should it
+    be necessary,
+    """
+    def __init__(self, value):
+        self.value = value
+        d1, d2, d3, d4, d5 = struct.unpack("<LHHH6s", value)
+        b5, b4, b3, b2, b1, b0 = struct.unpack("<BBBBBB", d5)
+        d5 = b5 << 40 | b4 << 32 | b3 << 24 | b2 << 16 | b1 << 8 | b0
+        self.Data1 = d1
+        self.Data2 = d2
+        self.Data3 = d3
+        self.Data4 = d4
+        self.Data4 = d5
+        c1 = struct.pack(">L", d1).encode("hex")
+        c2 = struct.pack(">H", d2).encode("hex")
+        c3 = struct.pack(">H", d3).encode("hex")
+        c4 = struct.pack("<H", d4).encode("hex")
+        c5 = struct.pack(">Q", d5).encode("hex")[4:]
+        self.bracket = "{%s-%s-%s-%s-%s}" % (c1, c2, c3, c4, c5)
+
+    def __repr__(self):
+        return self.bracket
+
+    def GetRaw(self):
+        """
+        Returns the raw value directly.
+
+        :return: 16 bytes (string)
+        """
+        return self.value
+
+
 class LNKValidator(Validator):
     """
     Class that validates an object to determine if it is a valid MS-SHLLINK (LNK) file.
@@ -207,7 +241,8 @@ class LNKValidator(Validator):
             "BlockType": "KnownFolderDataBlock",
             "BlockSize": bsize,
             "BlockSignature": bsign,
-            "KnownFolderID": folderid,  # should parse folderid...
+            "KnownFolderID": GUID(folderid),  # should parse folderid...
+            #"Raw:KnownFolderID": folderid,  # some can bet folder integer ID -- need examples
             "Offset": offset,
             #"DEBUG_RAW": block
         }
@@ -266,8 +301,8 @@ class LNKValidator(Validator):
             "Length": length,
             "Version": version,
             "MachineID": machine_id,
-            "Droid": droid,
-            "DroidBirth": droid_birth,
+            "Droid": [GUID(droid[0:16]), GUID(droid[16:32])],
+            "DroidBirth": [GUID(droid_birth[0:16]), GUID(droid_birth[16:32])],
             #"DEBUG_RAW": block
         }
 
@@ -497,6 +532,8 @@ class LNKValidator(Validator):
         shlheader = self._Read(76)
         magic_header = shlheader[0:20]
         flags_raw, fileatt_raw = struct.unpack("<LL", shlheader[20:28])
+        self.details["HeaderSize"] = magic_header[0:4].encode("hex")
+        self.details["LinkCLSID"] = GUID(magic_header[4:20])
         self.details["ATime"] = self._MSTimestamp(shlheader[28:36])
         self.details["CTime"] = self._MSTimestamp(shlheader[36:44])
         self.details["WTime"] = self._MSTimestamp(shlheader[44:52])
