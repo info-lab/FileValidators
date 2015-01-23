@@ -57,6 +57,66 @@ class GUID(object):
         return self.value
 
 
+class TypedPropertyValue(object):
+    """
+    This class handles converting all the TypedPropertyValues from their packed representation into
+    meaningful Python objects. Its better than having all that logic inside the different classes
+    that require such conversion.
+
+    The types supported are only those that can be found in a MS Shell Link file, not all the values
+    defined by Microsoft. If one type is unsupported, code to support it will be added once found.
+    """
+    # should change LNKValidator._MSTimestamp into a call to the corresponding method here.
+
+    def __init__(self, value):
+        self.__type, padding = struct.unpack("<HH", value[0: 4])
+        self.__value = value[4:]
+        self.type_jumplist = {
+            0x0002: self._Int,
+            0x0003: self._Int,
+            #0x0004: self._Float,
+            #0x0005: self._Float,
+            #0x0007: self._Date,
+            0x0013: self._Int,
+            0x001f: self._UnicodeString,
+
+        }
+        # this is used to detect which types have to be supported
+        self.value = "TypedPropertyValue: %s" % hex(self.__type)
+        if self.__type in self.type_jumplist.keys():
+            self.value = self.type_jumplist[self.__type](self.__value)
+
+    def _Date(self, value):
+        return datetime.datetime.(1899, 12, 30)  # a timedelta should be calculated from value
+
+    def _Filetime(self, value):
+        pass
+
+    def _Float(self, value):
+        pass
+
+    def _Int(self, value):
+        st_values = {
+            0x0002: (2, "<h"),
+            0x0003: (4, "<l"),
+            0x0013: (4, "<L"),
+        }
+        length, st = st_values[self.__type]
+        ret, = struct.unpack(st, value[: length])
+        return ret
+
+    def _UnicodeString(self, value):
+        length, = struct.unpack("<L", value[0: 4])
+        ret = value[4: 4 + length]
+        if len(ret) % 2 == 1:
+            ret += '\x00'  # zero-padding to get a valid utf-16 token
+        ret = ret.decode("utf-16")
+        return ret[:ret.find("\x00")]
+
+    def GetValue(self):
+        return self.value
+
+
 class PropertyStore(object):
     """
     Similar to GUID class, this class receives a buffer with a PropertyStore Object and processes
@@ -65,19 +125,51 @@ class PropertyStore(object):
 
     def __init__(self, buff):
         self.__raw = buff
-        self.__spv = buff[24:]
+        spv = buff[24:]
         self.storage_size, self.version = struct.unpack("<LL", buff[0:8])
         self.formatid = GUID(buff[8:24])
+        self.properties = []
         if self.formatid == "{D5CDD505-2E9C-101B-9397-08002B2CF9AE}":
-            self._SPVString()
+            self._SPVString(spv)
         else:
-            self._SPVInt()
+            self._SPVInt(spv)
 
-    def _SPVString(self):
-        pass
+    def __repr__(self):
+        return "[" + ",\n".join(["%r" % p for p in self.properties]) + "]"
 
-    def _SPVInt(self):
-        pass
+    def _SPVString(self, spv):
+        pos = 0
+        vsize, = struct.unpack("<L", spv[pos: pos + 4])
+        while vsize:
+            nsize, = struct.unpack("<L", spv[pos + 4: pos + 8])  # we assume this means # of bytes
+            name = spv[pos + 9: pos + 9 + nsize]
+            name = name.decode("utf-16")
+            spos = pos + 9 + nsize
+            epos = pos + vsize
+            value = TypedPropertyValue(spv[spos: epos]).GetValue()
+            property = {
+                "Name": name,
+                "Value": value
+            }
+            self.properties.append(property)
+            pos = epos
+            vsize, = struct.unpack("<L", spv[pos: pos + 4])
+
+    def _SPVInt(self, spv):
+        pos = 0
+        vsize, = struct.unpack("<L", spv[pos: pos + 4])
+        while vsize:
+            id, = struct.unpack("<L", spv[pos + 4: pos + 8])  # we assume this means # of bytes
+            spos = pos + 9
+            epos = pos + vsize
+            value = TypedPropertyValue(spv[spos: epos]).GetValue()
+            property = {
+                "Id": id,
+                "Value": value
+            }
+            self.properties.append(property)
+            pos = epos
+            vsize, = struct.unpack("<L", spv[pos: pos + 4])
 
 
 class LNKValidator(Validator):
@@ -280,7 +372,7 @@ class LNKValidator(Validator):
             "BlockType": "PropertyStoreDataBlock",
             "BlockSize": bsize,
             "BlockSignature": bsign,
-            "PropertyStore": prop_store,
+            "PropertyStore": PropertyStore(prop_store),
             #"DEBUG_RAW": block
         }
 
