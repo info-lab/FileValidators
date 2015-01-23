@@ -23,7 +23,7 @@ from Validator import Validator
 class GUID(object):
     """
     This class manages GUID to represent them from raw data into bracket representation. Should it
-    be necessary,
+    be necessary, other representations can be added as methods.
     """
     def __init__(self, value):
         self.value = value
@@ -40,10 +40,13 @@ class GUID(object):
         c3 = struct.pack(">H", d3).encode("hex")
         c4 = struct.pack("<H", d4).encode("hex")
         c5 = struct.pack(">Q", d5).encode("hex")[4:]
-        self.bracket = "{%s-%s-%s-%s-%s}" % (c1, c2, c3, c4, c5)
+        self.__bracket = "{%s-%s-%s-%s-%s}" % (c1, c2, c3, c4, c5)
 
     def __repr__(self):
-        return self.bracket
+        return self.__bracket
+
+    def __eq__(self, other):
+        return other.lower() == self.__bracket
 
     def GetRaw(self):
         """
@@ -52,6 +55,29 @@ class GUID(object):
         :return: 16 bytes (string)
         """
         return self.value
+
+
+class PropertyStore(object):
+    """
+    Similar to GUID class, this class receives a buffer with a PropertyStore Object and processes
+    it to ease representing it a as list of properties.
+    """
+
+    def __init__(self, buff):
+        self.__raw = buff
+        self.__spv = buff[24:]
+        self.storage_size, self.version = struct.unpack("<LL", buff[0:8])
+        self.formatid = GUID(buff[8:24])
+        if self.formatid == "{D5CDD505-2E9C-101B-9397-08002B2CF9AE}":
+            self._SPVString()
+        else:
+            self._SPVInt()
+
+    def _SPVString(self):
+        pass
+
+    def _SPVInt(self):
+        pass
 
 
 class LNKValidator(Validator):
