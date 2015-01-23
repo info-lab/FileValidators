@@ -87,7 +87,7 @@ class TypedPropertyValue(object):
             self.value = self.type_jumplist[self.__type](self.__value)
 
     def _Date(self, value):
-        return datetime.datetime.(1899, 12, 30)  # a timedelta should be calculated from value
+        return datetime.datetime(1899, 12, 30)  # a timedelta should be calculated from value
 
     def _Filetime(self, value):
         pass
