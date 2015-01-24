@@ -111,7 +111,9 @@ class TypedPropertyValue(object):
         if len(ret) % 2 == 1:
             ret += '\x00'  # zero-padding to get a valid utf-16 token
         ret = ret.decode("utf-16")
-        return ret[:ret.find("\x00")]
+        if '\x00' in ret:
+            ret = ret[:ret.find("\x00")]
+        return ret  # have to fix this
 
     def GetValue(self):
         return self.value
