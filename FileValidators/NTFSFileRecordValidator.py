@@ -37,7 +37,6 @@ class NTFSFileRecordValidator(Validator):
         self.data = ""
         self.pos = 0
         self.details = {}
-        self.magic = "L\x00\x00\x00\x01\x14\x02\x00\x00\x00\x00\x00\xc0\x00\x00\x00\x00\x00\x00F"
 
     def _ConvertBytes(self, value):
         pass
