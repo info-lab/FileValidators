@@ -6,6 +6,7 @@ from PNGValidator import PNGValidator
 from SQLiteValidator import SQLiteValidator
 from ZIPValidator import ZIPValidator
 from LNKValidator import LNKValidator
+from NTFSFileRecordValidator import NTFSFileRecordValidator
 from Validator import Validator
 
-__VER__ = "0.6.2"
+__VER__ = "0.6.3"
