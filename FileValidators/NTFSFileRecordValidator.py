@@ -17,6 +17,7 @@
 import datetime
 import struct
 
+from collections import namedtuple
 from Validator import Validator
 
 
@@ -37,9 +38,30 @@ class NTFSFileRecordValidator(Validator):
         self.data = ""
         self.pos = 0
         self.details = {}
-
-    def _ConvertBytes(self, value):
-        pass
+        # some structures to easy up everything later on
+        self.st_header = struct.Struct("<4sHHQHHHHLLQH")
+        self.nt_header = namedtuple("Header",
+            "magic offset_update size_update lsn sequence_number hardlink_count offset_attribute "
+            "flags size_real size_alloc base_record next_attribute")
+        self.st_att_header = struct.Struct("<")
+        self.attribute_types = {
+            0x10: "$STANDARD_INFORMATION",
+            0x20: "$ATTRIBUTE_LIST",
+            0x30: "$FILE_NAME",
+            0x40: "$OBJECT_ID",
+            0x50: "$SECURITY_DESCRIPTOR",
+            0x60: "$VOLUME_NAME",
+            0x70: "$VOLUME_INFORMATION",
+            0x80: "$DATA",
+            0x90: "$INDEX_ROOT",
+            0xa0: "$INDEX_ALLOCATION",
+            0xb0: "$BITMAP",
+            0xc0: "$REPARSE_POINT",
+            0xd0: "$EA_INFORMATION",
+            0xe0: "$EA",
+            0xf0: "$PROPERTY_SET",
+            0x100: "$LOGGED_UTILITY_STREAM",
+        }
 
     def _Read(self, length):
         ret = self.data[self.pos: self.pos + length]
@@ -60,6 +82,26 @@ class NTFSFileRecordValidator(Validator):
         self.details = {
             "extensions": [".filerecord"],
         }
+
+    def _MSTimestamp(self, timestamp):
+        """
+        Converts a MS Timestamp into a datetime object.
+        :param timestamp: 64 bit MS timestap (string)
+        :return:
+        """
+        tics, = struct.unpack("<Q", timestamp)
+        days = tics / 864000000000
+        rem = tics - days * 864000000000
+        hours = rem / 36000000000
+        rem -= hours * 36000000000
+        minutes = rem / 600000000
+        rem -= minutes * 600000000
+        seconds = rem / 10000000
+        rem -= seconds * 10000000
+        microseconds = rem / 100
+        td = datetime.timedelta(days)  # this way its easier to handle leap years
+        date = datetime.datetime(1601, 1, 1, hours, minutes, seconds, microseconds) + td
+        return date
 
     def Validate(self, fd):
         """
@@ -84,5 +126,36 @@ class NTFSFileRecordValidator(Validator):
         # and this top section could go to Validator, perhaps?
         # now we start with the header validation, this could go to a separate method, but it then
         # calling of
-
+        ############################################################################################
+        data = self.data
+        ############################################################################################
+        # Parse the record header.
+        # Parse the Attributes header
+        # Parse each attribute type structures (STANDARD INFORMATION)
+        # Interesting attributes for now: STANDARD_INFORMATION, FILENAME
+        self.details["header"] = self.nt_header._make(self.st_header.unpack(data[0:42]))
+        header = self.details["header"]
+        self.is_valid = header.magic == "FILE" and header.size_alloc >= header.size_real
+        if not self.is_valid:
+            return False
+        self.details["attributes"] = []
+        attlist = self.details["attributes"]
+        pos = header.offset_attribute
+        att_type, att_len = struct.unpack("<LL", data[pos: pos + 8])
+        while att_type in self.attribute_types:
+            # print "Current: (%d, %d, %r) resident: %r" % \
+            #      (att_type, att_len, struct.unpack("<L", data[pos + 0x10: pos + 0x14]),
+            #      bool(struct.unpack("<B", data[pos + 0x08])[0]))
+            attlist.append(self.attribute_types[att_type])
+            # here we have to add the attribute header and attribute structures parsing code
+            # for now, we just add the name of the attribute so we can test the code and see if
+            # we're parsing the attribute list correctly.
+            pos += att_len
+            if pos + 8 <= len(data):
+                att_type, att_len = struct.unpack("<LL", data[pos: pos + 8])
+            elif pos + 4 <= len(data):
+                att_type, att_len = struct.unpack("<L", data[pos: pos + 8])[0], 0
+            else:
+                att_type, att_len = -1, -1
+            # print "Next: (%d, %d)" % (att_type, att_len)
         return self.is_valid  # still working on the proper algorithm
