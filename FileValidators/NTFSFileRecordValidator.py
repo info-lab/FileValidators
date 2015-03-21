@@ -40,9 +40,12 @@ class NTFSFileRecordValidator(Validator):
         self.details = {}
         # some structures to easy up everything later on
         self.st_header = struct.Struct("<4sHHQHHHHLLQH")
+        self.st_att_stdinfo = struct.Struct("<QQQQLLLLLLQQ")
         self.nt_header = namedtuple("Header",
             "magic offset_update size_update lsn sequence_number hardlink_count offset_attribute "
             "flags size_real size_alloc base_record next_attribute")
+        self.nt_att_stdinfo = namedtuple("StandardInformation",
+            "ctime atime mtime rtime fileperm maxver vernum classid ownerid secid quota usn")
         self.st_att_header = struct.Struct("<")
         self.attribute_types = {
             0x10: "$STANDARD_INFORMATION",
@@ -62,6 +65,48 @@ class NTFSFileRecordValidator(Validator):
             0xf0: "$PROPERTY_SET",
             0x100: "$LOGGED_UTILITY_STREAM",
         }
+        self.attribute_parsers = {
+            0x10: self._AttStdInfo,
+        }
+
+    def _AttStdInfo(self, att):
+        """
+        Parses a $STANDARD_INFORMATION attribute.
+
+        :param att: attribute data, without the header.
+        :return: dictionary with the attribute data.
+        """
+        values = self.nt_att_stdinfo._make(self.st_att_stdinfo.unpack(att[0:0x48]))
+        ret = {
+            "Type": "$STANDARD_INFORMATION",
+            "CTime": self._MSTimestamp(values.ctime),
+            "ATime": self._MSTimestamp(values.atime),
+            "MTime": self._MSTimestamp(values.mtime),
+            "RTime": self._MSTimestamp(values.rtime),
+            "Permissions": {
+                "ReadOnly": bool(values.fileperm & 0x0001),
+                "Hidden": bool(values.fileperm & 0x0002),
+                "System": bool(values.fileperm & 0x0004),
+                "Archive": bool(values.fileperm & 0x0020),
+                "Device": bool(values.fileperm & 0x0040),
+                "Normal": bool(values.fileperm & 0x0080),
+                "Temporary": bool(values.fileperm & 0x0100),
+                "SparseFile": bool(values.fileperm & 0x0200),
+                "ReparsePoint": bool(values.fileperm & 0x0400),
+                "Compressed": bool(values.fileperm & 0x0800),
+                "Offline": bool(values.fileperm & 0x1000),
+                "NotContentIndexed": bool(values.fileperm & 0x2000),
+                "Encrypted": bool(values.fileperm & 0x4000),
+            },
+            "MaxVersions": values.maxver,
+            "VersionNumber": values.vernum,
+            "ClassID": values.classid,
+            "OwnerID": values.ownerid,
+            "SecurityID": values.secid,
+            "QuotaCharged": values.quota,
+            "USN": values.usn,
+        }
+        return ret
 
     def _Read(self, length):
         ret = self.data[self.pos: self.pos + length]
@@ -89,7 +134,8 @@ class NTFSFileRecordValidator(Validator):
         :param timestamp: 64 bit MS timestap (string)
         :return:
         """
-        tics, = struct.unpack("<Q", timestamp)
+        # tics, = struct.unpack("<Q", timestamp)
+        tics = timestamp
         days = tics / 864000000000
         rem = tics - days * 864000000000
         hours = rem / 36000000000
@@ -146,16 +192,17 @@ class NTFSFileRecordValidator(Validator):
             # print "Current: (%d, %d, %r) resident: %r" % \
             #      (att_type, att_len, struct.unpack("<L", data[pos + 0x10: pos + 0x14]),
             #      bool(struct.unpack("<B", data[pos + 0x08])[0]))
-            attlist.append(self.attribute_types[att_type])
+            att_data = data[pos: pos + att_len]
+            if att_type in self.attribute_parsers:
+                parser = self.attribute_parsers[att_type]
+                att = parser(att_data)
+            else:
+                att = self.attribute_types[att_type]
+            attlist.append(att)
             # here we have to add the attribute header and attribute structures parsing code
             # for now, we just add the name of the attribute so we can test the code and see if
             # we're parsing the attribute list correctly.
             pos += att_len
-            if pos + 8 <= len(data):
-                att_type, att_len = struct.unpack("<LL", data[pos: pos + 8])
-            elif pos + 4 <= len(data):
-                att_type, att_len = struct.unpack("<L", data[pos: pos + 8])[0], 0
-            else:
-                att_type, att_len = -1, -1
+            att_type, att_len = struct.unpack("<LL", data[pos: pos + 8])
             # print "Next: (%d, %d)" % (att_type, att_len)
         return self.is_valid  # still working on the proper algorithm
