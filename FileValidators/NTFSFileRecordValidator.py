@@ -181,13 +181,18 @@ class NTFSFileRecordValidator(Validator):
         # Parse the Attributes header
         # Parse each attribute type structures (STANDARD INFORMATION)
         # Interesting attributes for now: STANDARD_INFORMATION, FILENAME
-        self.details["header"] = self.nt_header._make(self.st_header.unpack(data[0:42]))
-        header = self.details["header"]
-        self.is_valid = header.magic == "FILE" and header.size_alloc >= header.size_real
+        self.details["Header"] = self.nt_header._make(self.st_header.unpack(data[0:42]))._asdict()
+        header = self.details["Header"]
+        flags = header["flags"]
+        header["flags"] = {
+            "InUse": bool(flags & 0x01),
+            "IsDir": bool(flags & 0x02),
+        }
+        self.is_valid = header["magic"] == "FILE" and header["size_alloc"] >= header["size_real"]
         if not self.is_valid:
             return False
-        self.details["attributes"] = []
-        attlist = self.details["attributes"]
+        self.details["Attributes"] = []
+        attlist = self.details["Attributes"]
         pos = header.offset_attribute
         att_type, att_len = struct.unpack("<LL", data[pos: pos + 8])
         while att_type in self.attribute_types:
@@ -209,4 +214,6 @@ class NTFSFileRecordValidator(Validator):
             pos += att_len
             att_type, att_len = struct.unpack("<LL", data[pos: pos + 8])
             # print "Next: (%d, %d)" % (att_type, att_len)
+        if self.is_valid:
+            self.bytes_last_valid = 1024
         return self.is_valid  # still working on the proper algorithm
