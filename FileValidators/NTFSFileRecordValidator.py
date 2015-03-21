@@ -40,11 +40,11 @@ class NTFSFileRecordValidator(Validator):
         self.details = {}
         # some structures to easy up everything later on
         self.st_long = struct.Struct("<H")
-        self.st_header = struct.Struct("<4sHHQHHHHLLQH")
+        self.st_header = struct.Struct("<4sHHQHHHHLLQHHL")
         self.st_att_stdinfo = struct.Struct("<QQQQLLLLLLQQ")
         self.nt_header = namedtuple("Header",
             "magic offset_update size_update lsn sequence_number hardlink_count offset_attribute "
-            "flags size_real size_alloc base_record next_attribute")
+            "flags size_real size_alloc base_record next_attribute align mft_number")
         self.nt_att_stdinfo = namedtuple("StandardInformation",
             "ctime atime mtime rtime fileperm maxver vernum classid ownerid secid quota usn")
         self.st_att_header = struct.Struct("<")
@@ -181,7 +181,7 @@ class NTFSFileRecordValidator(Validator):
         # Parse the Attributes header
         # Parse each attribute type structures (STANDARD INFORMATION)
         # Interesting attributes for now: STANDARD_INFORMATION, FILENAME
-        self.details["Header"] = self.nt_header._make(self.st_header.unpack(data[0:42]))._asdict()
+        self.details["Header"] = self.nt_header._make(self.st_header.unpack(data[0:48]))._asdict()
         header = self.details["Header"]
         flags = header["flags"]
         header["flags"] = {
@@ -193,7 +193,7 @@ class NTFSFileRecordValidator(Validator):
             return False
         self.details["Attributes"] = []
         attlist = self.details["Attributes"]
-        pos = header.offset_attribute
+        pos = header["offset_attribute"]
         att_type, att_len = struct.unpack("<LL", data[pos: pos + 8])
         while att_type in self.attribute_types:
             # print "Current: (%d, %d, %r) resident: %r" % \
