@@ -207,7 +207,7 @@ class NTFSFileRecordValidator(Validator):
                 att = parser(att_data[att_offset:])
             else:
                 att = self.attribute_types[att_type]
-            att.update({"Type": hex(att_type)})
+            att.update({"Type": att_type})
             attlist.append(att)
             # here we have to add the attribute header and attribute structures parsing code
             # for now, we just add the name of the attribute so we can test the code and see if
