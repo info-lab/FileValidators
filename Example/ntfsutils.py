@@ -17,9 +17,35 @@
 # The idea behind this module is that you can import some useful functions from the (i)python
 # console. This functions help in pretty printing of the information return form
 # NTFSRecordValidator.GetDetails().
+#
+# Mostly, this was needed for a special class in teaching the use of MFT information when analyzing
+# a drive.
 
 
-def ntfs_prettyprint(v):
+ATTRIBUTES_FIELDS = {
+    0x10: [
+        ("CTime", "Creation time"),
+        ("ATime", "Altered time"),
+        ("MTime", "MFT changed time"),
+        ("RTime", "Read time"),
+        ("Permissions", "File permissions"),
+        ("MaxVersions", "Maximum number of versions"),
+        ("VersionNumber", "Version number"),
+        ("ClassID", "Class Id"),
+        ("OwnerID", "Owner Id"),
+        ("SecurityID", "Security Id"),
+        ("QuotaCharged", "Quota Charged"),
+        ("USN", "Update Sequence Number"),
+    ]
+}
+
+
+def pretty_print(v):
+    """
+    Prints the values obtained from NTFSRecordValidator.
+
+    :param v: an instance of NTFSRecordValidator.
+    """
     valid, eof, last_valid, end = v.GetStatus()
     d = v.GetDetails()
     if valid:
@@ -50,5 +76,26 @@ def ntfs_prettyprint(v):
                 offset, field, value = v
                 field = field.ljust(30)
                 print "    %s:  %s%s" % (offset, field, value)
+        if "Attributes" in d:
+            attributes = d["Attributes"]
+            print "\nRecord Attributes:"
+            for a in attributes:
+                print "    %s" % (a["TypeName"])
+                type = a["Type"]
+                if a["Parsed"]:
+                    attvars = ATTRIBUTES_FIELDS[type]
+                    for v in attvars:
+                        index, name = v
+                        name = name.ljust(28,".")
+                        if hasattr(a[index], "__iter__"):
+                            print "        %s" % name
+                            for i in a[index]:
+                                elem = "%s" % i
+                                elem = elem.ljust(24)
+                                print "            %s%s" % (elem, a[index][i])
+                        else:
+                            print "        %s%s" % (name, a[index])
+                else:
+                    print "    (not parsed)"
     else:
         print "Non-valid NTFS Record"
