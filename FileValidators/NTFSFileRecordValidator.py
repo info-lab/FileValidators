@@ -39,6 +39,7 @@ class NTFSFileRecordValidator(Validator):
         self.pos = 0
         self.details = {}
         # some structures to easy up everything later on
+        self.st_long = struct.Struct("<H")
         self.st_header = struct.Struct("<4sHHQHHHHLLQH")
         self.st_att_stdinfo = struct.Struct("<QQQQLLLLLLQQ")
         self.nt_header = namedtuple("Header",
@@ -48,22 +49,22 @@ class NTFSFileRecordValidator(Validator):
             "ctime atime mtime rtime fileperm maxver vernum classid ownerid secid quota usn")
         self.st_att_header = struct.Struct("<")
         self.attribute_types = {
-            0x10: "$STANDARD_INFORMATION",
-            0x20: "$ATTRIBUTE_LIST",
-            0x30: "$FILE_NAME",
-            0x40: "$OBJECT_ID",
-            0x50: "$SECURITY_DESCRIPTOR",
-            0x60: "$VOLUME_NAME",
-            0x70: "$VOLUME_INFORMATION",
-            0x80: "$DATA",
-            0x90: "$INDEX_ROOT",
-            0xa0: "$INDEX_ALLOCATION",
-            0xb0: "$BITMAP",
-            0xc0: "$REPARSE_POINT",
-            0xd0: "$EA_INFORMATION",
-            0xe0: "$EA",
-            0xf0: "$PROPERTY_SET",
-            0x100: "$LOGGED_UTILITY_STREAM",
+            0x10: {"Type": "$STANDARD_INFORMATION", "Parsed": False},
+            0x20: {"Type": "$ATTRIBUTE_LIST", "Parsed": False},
+            0x30: {"Type": "$FILE_NAME", "Parsed": False},
+            0x40: {"Type": "$OBJECT_ID", "Parsed": False},
+            0x50: {"Type": "$SECURITY_DESCRIPTOR", "Parsed": False},
+            0x60: {"Type": "$VOLUME_NAME", "Parsed": False},
+            0x70: {"Type": "$VOLUME_INFORMATION", "Parsed": False},
+            0x80: {"Type": "$DATA", "Parsed": False},
+            0x90: {"Type": "$INDEX_ROOT", "Parsed": False},
+            0xa0: {"Type": "$INDEX_ALLOCATION", "Parsed": False},
+            0xb0: {"Type": "$BITMAP", "Parsed": False},
+            0xc0: {"Type": "$REPARSE_POINT", "Parsed": False},
+            0xd0: {"Type": "$EA_INFORMATION", "Parsed": False},
+            0xe0: {"Type": "$EA", "Parsed": False},
+            0xf0: {"Type": "$PROPERTY_SET", "Parsed": False},
+            0x100: {"Type": "$LOGGED_UTILITY_STREAM", "Parsed": False},
         }
         self.attribute_parsers = {
             0x10: self._AttStdInfo,
@@ -79,6 +80,7 @@ class NTFSFileRecordValidator(Validator):
         values = self.nt_att_stdinfo._make(self.st_att_stdinfo.unpack(att[0:0x48]))
         ret = {
             "Type": "$STANDARD_INFORMATION",
+            "Parsed": True,
             "CTime": self._MSTimestamp(values.ctime),
             "ATime": self._MSTimestamp(values.atime),
             "MTime": self._MSTimestamp(values.mtime),
@@ -193,9 +195,11 @@ class NTFSFileRecordValidator(Validator):
             #      (att_type, att_len, struct.unpack("<L", data[pos + 0x10: pos + 0x14]),
             #      bool(struct.unpack("<B", data[pos + 0x08])[0]))
             att_data = data[pos: pos + att_len]
-            if att_type in self.attribute_parsers:
+            resident = att_data[0x08] == "\x00"
+            if resident and att_type in self.attribute_parsers:
+                att_offset, = self.st_long.unpack(att_data[0x14:0x16])
                 parser = self.attribute_parsers[att_type]
-                att = parser(att_data)
+                att = parser(att_data[att_offset:])
             else:
                 att = self.attribute_types[att_type]
             attlist.append(att)
