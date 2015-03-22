@@ -234,7 +234,8 @@ class NTFSFileRecordValidator(Validator):
             "InUse": bool(flags & 0x01),
             "IsDir": bool(flags & 0x02),
         }
-        self.is_valid = header["magic"] == "FILE" and header["size_alloc"] >= header["size_real"]
+        self.is_valid = header["magic"] == "FILE" and \
+            header["offset_attribute"] < 1016
         if not self.is_valid:
             return False
         self.details["Attributes"] = []
@@ -259,6 +260,8 @@ class NTFSFileRecordValidator(Validator):
             # for now, we just add the name of the attribute so we can test the code and see if
             # we're parsing the attribute list correctly.
             pos += att_len
+            if pos > 1016:
+                break  # gotta decide whether this is bad behaviour
             att_type, att_len = struct.unpack("<LL", data[pos: pos + 8])
             # print "Next: (%d, %d)" % (att_type, att_len)
         if self.is_valid:
