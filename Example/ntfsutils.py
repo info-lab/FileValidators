@@ -60,54 +60,52 @@ def pretty_print(v):
     """
     valid, eof, last_valid, end = v.GetStatus()
     d = v.GetDetails()
-    if valid:
-        print "NTFS Record"
-        if "Header" in d:
-            header = d["Header"]
-            print "Record Header:"
-            flags = header["flags"]["InUse"] * "U" + header["flags"]["IsDir"] * "D"
-            values = [
-                ("0x00", "Magic number", header["magic"]),
-                ("0x04", "Offset to update sequence", header["offset_update"]),
-                ("0x06", "Size (words) of USN and USA", header["size_update"]),
-                ("0x08", "$Logfile Sequence Number", header["lsn"]),
-                ("0x10", "Sequence number", header["sequence_number"]),
-                ("0x12", "Hardlink count", header["hardlink_count"]),
-                ("0x14", "Offset to first attribute", header["offset_attribute"]),
-                ("0x16", "Flags", flags),
-                ("0x18", "Real size", header["size_real"]),
-                ("0x1C", "Allocated size", header["size_alloc"]),
-                ("0x20", "Base FILE record", header["base_record"]),
-                ("0x28", "Next attribute ID", header["next_attribute"]),
-                ("0x2A", "Align to 4-byte boundary", header["align"]),
-                ("0x2C", "MFT record number", header["mft_number"]),
-            ]
-            print "    Offset Field                         Value    "
-            print "    " + "=" * 46
-            for v in values:
-                offset, field, value = v
-                field = field.ljust(30)
-                print "    %s:  %s%s" % (offset, field, value)
-        if "Attributes" in d:
-            attributes = d["Attributes"]
-            print "\nRecord Attributes:"
-            for a in attributes:
-                print "    %s" % (a["TypeName"])
-                type = a["Type"]
-                if a["Parsed"]:
-                    attvars = ATTRIBUTES_FIELDS[type]
-                    for v in attvars:
-                        index, name = v
-                        name = name.ljust(28)
-                        if hasattr(a[index], "__iter__"):
-                            print "        %s" % name
-                            for i in a[index]:
-                                elem = "%s" % i
-                                elem = elem.ljust(24, ".")
-                                print "            %s%s" % (elem, a[index][i])
-                        else:
-                            print "        %s%s" % (name, a[index])
-                else:
-                    print "    (not parsed)"
-    else:
-        print "Non-valid NTFS Record"
+    print "NTFS Record"
+    print "Valid record: %s" % valid
+    if "Header" in d:
+        header = d["Header"]
+        print "Record Header:"
+        flags = header["flags"]["InUse"] * "U" + header["flags"]["IsDir"] * "D"
+        values = [
+            ("0x00", "Magic number", header["magic"]),
+            ("0x04", "Offset to update sequence", header["offset_update"]),
+            ("0x06", "Size (words) of USN and USA", header["size_update"]),
+            ("0x08", "$Logfile Sequence Number", header["lsn"]),
+            ("0x10", "Sequence number", header["sequence_number"]),
+            ("0x12", "Hardlink count", header["hardlink_count"]),
+            ("0x14", "Offset to first attribute", header["offset_attribute"]),
+            ("0x16", "Flags", flags),
+            ("0x18", "Real size", header["size_real"]),
+            ("0x1C", "Allocated size", header["size_alloc"]),
+            ("0x20", "Base FILE record", header["base_record"]),
+            ("0x28", "Next attribute ID", header["next_attribute"]),
+            ("0x2A", "Align to 4-byte boundary", header["align"]),
+            ("0x2C", "MFT record number", header["mft_number"]),
+        ]
+        print "    Offset Field                         Value    "
+        print "    " + "=" * 46
+        for v in values:
+            offset, field, value = v
+            field = field.ljust(30)
+            print "    %s:  %s%s" % (offset, field, value)
+    if "Attributes" in d:
+        attributes = d["Attributes"]
+        print "\nRecord Attributes:"
+        for a in attributes:
+            print "    %s" % (a["TypeName"])
+            type = a["Type"]
+            if a["Parsed"]:
+                attvars = ATTRIBUTES_FIELDS[type]
+                for v in attvars:
+                    index, name = v
+                    name = name.ljust(28)
+                    if hasattr(a[index], "__iter__"):
+                        print "        %s" % name
+                        for i in a[index]:
+                            elem = "%s" % i
+                            elem = elem.ljust(24, ".")
+                            print "            %s%s" % (elem, a[index][i])
+                    else:
+                        print "        %s%s" % (name, a[index])
+            else:
+                print "    (not parsed)"
