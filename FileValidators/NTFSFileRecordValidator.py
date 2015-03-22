@@ -41,13 +41,17 @@ class NTFSFileRecordValidator(Validator):
         # some structures to easy up everything later on
         self.st_long = struct.Struct("<H")
         self.st_header = struct.Struct("<4sHHQHHHHLLQHHL")
+        # self.st_att_header = struct.Struct("<")
         self.st_att_stdinfo = struct.Struct("<QQQQLLLLLLQQ")
+        self.st_att_filename = struct.Struct("<QQQQQQQLLBB")
         self.nt_header = namedtuple("Header",
             "magic offset_update size_update lsn sequence_number hardlink_count offset_attribute "
             "flags size_real size_alloc base_record next_attribute align mft_number")
         self.nt_att_stdinfo = namedtuple("StandardInformation",
             "ctime atime mtime rtime fileperm maxver vernum classid ownerid secid quota usn")
-        self.st_att_header = struct.Struct("<")
+        self.nt_att_filename = namedtuple("Filname",
+            "parent_dir ctime atime mtime rtime size_alloc size_real flags reparse filename_len "
+            "filename_namespace")
         self.attribute_types = {
             0x10: {"TypeName": "$STANDARD_INFORMATION", "Parsed": False},
             0x20: {"TypeName": "$ATTRIBUTE_LIST", "Parsed": False},
@@ -68,7 +72,7 @@ class NTFSFileRecordValidator(Validator):
         }
         self.attribute_parsers = {
             0x10: self._AttStdInfo,
-        }
+            0x30: self._AttFilename,        }
 
     def _AttStdInfo(self, att):
         """
@@ -107,6 +111,48 @@ class NTFSFileRecordValidator(Validator):
             "SecurityID": values.secid,
             "QuotaCharged": values.quota,
             "USN": values.usn,
+        }
+        return ret
+
+    def _AttFilename(self, att):
+        """
+        Parses a $FILENAME attribute.
+
+        :param att: attribute data, without the header.
+        :return: dictionary with the attribute data.
+        """
+        values = self.nt_att_filename._make(self.st_att_filename.unpack(att[0:0x42]))
+        filename = ""
+        if values.filename_len > 0:
+            count = values.filename_len * 2
+            filename = att[0x42:0x42 + count].decode("utf-16")
+        ret = {
+            "TypeName": "$FILENAME",
+            "Parsed": True,
+            "ParentDirectory": values.parent_dir,
+            "CTime": self._MSTimestamp(values.ctime),
+            "ATime": self._MSTimestamp(values.atime),
+            "MTime": self._MSTimestamp(values.mtime),
+            "RTime": self._MSTimestamp(values.rtime),
+            "Flags": {
+                "ReadOnly": bool(values.flags & 0x0001),
+                "Hidden": bool(values.flags & 0x0002),
+                "System": bool(values.flags & 0x0004),
+                "Archive": bool(values.flags & 0x0020),
+                "Device": bool(values.flags & 0x0040),
+                "Normal": bool(values.flags & 0x0080),
+                "Temporary": bool(values.flags & 0x0100),
+                "SparseFile": bool(values.flags & 0x0200),
+                "ReparsePoint": bool(values.flags & 0x0400),
+                "Compressed": bool(values.flags & 0x0800),
+                "Offline": bool(values.flags & 0x1000),
+                "NotContentIndexed": bool(values.flags & 0x2000),
+                "Encrypted": bool(values.flags & 0x4000),
+            },
+            "Reparse": values.reparse,
+            "FilenameLength": values.filename_len,
+            "FilenameNamespace": values.filename_namespace,
+            "Filename": filename,
         }
         return ret
 
