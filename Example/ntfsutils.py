@@ -36,7 +36,19 @@ ATTRIBUTES_FIELDS = {
         ("SecurityID", "Security Id"),
         ("QuotaCharged", "Quota Charged"),
         ("USN", "Update Sequence Number"),
-    ]
+    ],
+    0x30: [
+        ("ParentDirectory", "Parent directory"),
+        ("CTime", "Creation time"),
+        ("ATime", "Altered time"),
+        ("MTime", "MFT changed time"),
+        ("RTime", "Read time"),
+        ("Flags", "File flags"),
+        ("Reparse", "EAs and Reparse information"),
+        ("FilenameLength", "Filename length in chars"),
+        ("FilenameNamespace", "Filename namespace"),
+        ("Filename", "Filename"),
+    ],
 }
 
 
@@ -86,12 +98,12 @@ def pretty_print(v):
                     attvars = ATTRIBUTES_FIELDS[type]
                     for v in attvars:
                         index, name = v
-                        name = name.ljust(28,".")
+                        name = name.ljust(28)
                         if hasattr(a[index], "__iter__"):
                             print "        %s" % name
                             for i in a[index]:
                                 elem = "%s" % i
-                                elem = elem.ljust(24)
+                                elem = elem.ljust(24, ".")
                                 print "            %s%s" % (elem, a[index][i])
                         else:
                             print "        %s%s" % (name, a[index])
