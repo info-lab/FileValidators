@@ -49,6 +49,7 @@ class JPGValidator(Validator):
             '\xff\xf8', '\xff\xf9', '\xff\xfa', '\xff\xfb', '\xff\xfc', '\xff\xfd', '\xff\xfe'}
         self.restart_markers = {'\xff\x00', '\xff\xd0', '\xff\xd1', '\xff\xd2', '\xff\xd3',
             '\xff\xd4', '\xff\xd5', '\xff\xd6', '\xff\xd7'}
+        self.min_size = 135
         self.eoi_marker = False
         self.markers_found = []
         self.data = ""
@@ -110,21 +111,21 @@ class JPGValidator(Validator):
         first_read = self._Read(4)  # we replace 2 consecutive reads for 1 and some logic
         header_marker = first_read[0:2]
         current_marker = first_read[2:4]
-        #print header_marker, current_marker
+        # print header_marker, current_marker
         read_next_marker = True
         self.is_valid = header_marker == '\xff\xd8' and (current_marker in valid_markers)
         if self.is_valid and not self.eof:
-            self.markers_found.append(('\xff\xd8', self.pos - 4, 2))
+            self.markers_found.append(('ffd8', self.pos - 4, 2))
         self._CountValidBytes(4)
         is_eoi_marker = current_marker == '\xff\xd9'
         while not self.eof and not is_eoi_marker and self.is_valid:
-            #print current_marker.encode("hex")
-            #print "Marker: %s" % (current_marker.encode("hex"))
+            # print current_marker.encode("hex")
+            # print "Marker: %s" % (current_marker.encode("hex"))
             if current_marker == '\xff\xd9':
                 is_eoi_marker = True
                 break
             if current_marker == '\xff\xdd':  # this marker has a fixed length of 2, it is the
-            # only marker that has a fixed length, apart from FFD8 and FFD9.
+                # only marker that has a fixed length, apart from FFD8 and FFD9.
                 payload_length = 4
             else:
                 payload_length = self._Read(2)
@@ -134,7 +135,7 @@ class JPGValidator(Validator):
                 else:
                     payload_length = 0
             if self.is_valid and not self.eof:
-                self.markers_found.append((current_marker, self.pos - 4,
+                self.markers_found.append((current_marker.encode("hex"), self.pos - 4,
                     payload_length + 4))  # we add 2 from the length, and 2 from the marker
             data = self._Read(payload_length)
             # data could/should be used to validate, maybe something to do with quantization
@@ -143,10 +144,10 @@ class JPGValidator(Validator):
             eof = self.eof
             pos = 0
             while not eof and (current_marker == '\xff\xda') and pos >= 0:
-                #print "self.pos: %d, pos: %d..." % (self.pos, pos),
+                # print "self.pos: %d, pos: %d..." % (self.pos, pos),
                 file_tell = self.pos
                 adjust_offset = 0
-                #bytestring = self.fd.read(self._chunksize)  # we don't use self._Read() because
+                # bytestring = self.fd.read(self._chunksize)  # we don't use self._Read() because
                 bytestring = self.data[self.pos:]  # we don't use self...
                 # segment plus the EOI marker, and all that is less than self._chunksize.
                 # In that case, setting the self.eof flag (through self._Read()) would be
@@ -157,22 +158,22 @@ class JPGValidator(Validator):
                 remark_counter = 0
                 while seek_marker and pos >= 0:
                     remark_counter += 1
-                    #adjust_offset += pos
+                    # adjust_offset += pos
                     potential_marker = bytestring[pos: pos + 2]
                     if not(potential_marker in valid_restart_markers):
                         current_marker = potential_marker
                         seek_marker = False
                         read_next_marker = False
                         self._SetValidBytes(file_tell + pos + 2)
-                        #self.fd.seek(file_tell + adjust_offset + 2)
+                        # self.fd.seek(file_tell + adjust_offset + 2)
                         self.pos = file_tell + pos + 2
                     else:
                         adjust_offset += 2
                         self._CountValidBytes(adjust_offset)
-                        #bytestring = bytestring[pos + 2:]
+                        # bytestring = bytestring[pos + 2:]
                         seek_marker = "\xff" in bytestring
                     pos = bytestring.find("\xff", pos + 1)
-                #print remark_counter
+                # print remark_counter
             if read_next_marker:
                 current_marker = self._Read(2)
             self.is_valid = current_marker in valid_markers
@@ -182,6 +183,8 @@ class JPGValidator(Validator):
         if is_eoi_marker:
             self._SetValidBytes(self.bytes_last_valid - 2)  # small fix to valid bytes length
             self.end = True
-            self.markers_found.append(('\xff\xd9', self.pos - 2, 2))
+            self.markers_found.append(('ffd9', self.pos - 2, 2))
         # The last marker should always be EOI/FFD9 and has a fixed length of 0
+        if self.bytes_last_valid < self.min_size:
+            self.is_valid = False
         return self.is_valid
