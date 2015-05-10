@@ -62,7 +62,7 @@ class MOVValidator(Validator):
 
     def Validate(self, fd):
         """
-        Validates a file-like object to determine if its a valid NTFS FILE Record (from the MFT).
+        Validates a file-like object to determine if its a valid QuickTime File Format (file).
 
         :param fd: file-like object open for binary reading (file-like)
         :return: True on a valid FILE record, False otherwise (bool)

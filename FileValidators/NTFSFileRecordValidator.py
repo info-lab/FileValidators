@@ -72,7 +72,8 @@ class NTFSFileRecordValidator(Validator):
         }
         self.attribute_parsers = {
             0x10: self._AttStdInfo,
-            0x30: self._AttFilename,        }
+            0x30: self._AttFilename,
+        }
 
     def _AttStdInfo(self, att):
         """

@@ -27,6 +27,7 @@ class SQLiteValidator(Validator):
         Calls Validator.__init__() and sets some internal attributes for the validation process.
         """
         super(SQLiteValidator, self).__init__()
+        self.data = ""
         self._Cleanup()
 
     def _ConvertBytes(self, value, size, big_endian=True):

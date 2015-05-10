@@ -1,3 +1,33 @@
+Latest
+======
+
+Version 0.6.3:
+--------------
+* Improvements to LNKValidator:
+    * GUID data structure.
+    * PropertyStore data structure.
+        * TypedPropertyValue needs further work.
+* NTFSFileRecordValidator, which can validate, analyze and extract information from valid NTFS FILE
+records, that is, the "rows" which compose the Master File Table in a NTFS filesystem.
+* Example/ntfsutils.py -- a set of functions to get a smoother workflow when using 
+NTFSRecordValidator from the python console.
+* MOVValidator skeleton, no real code implemented yet.
+* NTFSRecordValidator and MOVValidator use a different convention when working with the file data.
+Instead of pretending they were reading a file with self._Read (which was necessary when porting the
+older validators to the new buffer-oriented design), they access self.data directly.
+* Small cleanup over some files.
+
+Planned for future versions:
+----------------------------
++ Improvements to LNKValidator:
+    + ItemID data structure.
++ Example/lnkinfo.py uses the LNKValidator to parse and show information of LNK files.
++ MOVValidator, which reads the header of a MOV file an validates the atom structures.
++ Review the use of abc.ABCMeta and its semantics.
+
+Older
+=====
+
 Version 0.6.2:
 -------------
 * LNKValidator implemented, but still needs work:
