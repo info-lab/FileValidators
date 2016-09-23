@@ -1,6 +1,19 @@
 FileValidators
 ==============
 
+**Important notice:** as of September 22, 2016, we've tried porting GIFValidator to Cython and
+attained a ~30x speedup when analyzing a set of valid test images. JPGValidator was also ported
+but reached a lower speedup (2.5x), most probably because of the algorithm that is more
+Python-friendly than Cython-friendly.
+
+In the coming months **we'll be moving to Cython**, while maintaining compatibility with previous
+versions. If everything goes as planed, versions 0.7.x will be the transition stage with version
+0.8 being the first fully Cythonized release and the end of the transition stage.
+
+During 0.7.x versions, validation algorithms will probably be changed to work better in the new
+architecture and language. A complete ZIP validator will also be developed and a code refactor
+and cleanup is expected.
+
 Description
 -----------
 A validator is a small program, object or function that can tell if a given object (a file in most

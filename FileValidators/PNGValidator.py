@@ -19,6 +19,9 @@ import zlib
 from Validator import Validator
 
 
+# TODO: 0.7 release, replace zlib.crc32 for a Cython implementation for fast cdef calling --
+# TODO:     see http://www.libpng.org/pub/png/spec/1.2/PNG-CRCAppendix.html
+
 class PNGValidator(Validator):
     """
     Class that validates an object to determine if it is a valid PNG file.

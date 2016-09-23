@@ -19,6 +19,7 @@ older validators to the new buffer-oriented design), they access self.data direc
 
 Planned for future versions:
 ----------------------------
++ **Cython port of all validators.**
 + Improvements to LNKValidator:
     + ItemID data structure.
 + Example/lnkinfo.py uses the LNKValidator to parse and show information of LNK files.
