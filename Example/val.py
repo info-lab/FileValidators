@@ -102,6 +102,8 @@ validators = {
     '.xls': FileValidators.MSOLEValidator(),
     '.ppt': FileValidators.MSOLEValidator(),
     '.zip': FileValidators.ZIPValidator(),
+    '.ics': FileValidators.ICSValidator(),
+    '.EML': FileValidators.EMLValidator(),
 }
 
 loggers = {
